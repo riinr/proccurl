@@ -42,12 +42,12 @@ It should be similar to [MCP](https://modelcontextprotocol.io/docs/getting-start
 
 ## More details
 
-1. Your app starts proccurl with `--protocols`
+1. Your app starts proccurl with `protocols`:
     1. proccurl returns a list of protocol ids separeted by new line.
 2. Your app reads protocols to check if it knowns any of its protocols.
 4. Your app starts proccurl with `proccurl connect --protocol {protocol}`.
-    1. the comunication between your app and proccurl is defined by the protocol
-5. There are currently only one protocol defined:
+    1. the comunication between your app and proccurl is defined by the protocol.
+5. There are currently only one protocol implemented:
     1. [stdio-v1+jsonl-v1+json-rpc-v2+open-rpc-v1](./PROTOCOLS/STDIO-v1_JSONL-v1_JSON-RPC-v2_OPEN-RPC-v1.md)
 
 __Example:__
