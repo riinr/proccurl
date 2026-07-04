@@ -1,4 +1,4 @@
-{ pkgs, ...}:
+{ pkgs, inputs, ...}:
 {
   # Name your shell environment
   devshell.name = "proccurl";
@@ -26,6 +26,8 @@
     pkgs.ripgrep
     pkgs.gcc
     pkgs.context7-mcp
+    pkgs.nsync
+    pkgs.cosmopolitan
   ];
 
   # configure direnv .envrc file
@@ -81,7 +83,8 @@
     nim c --threads:on -o:bin/proccurl src/proccurl.nim
   '';
   env = [
-    { name = "LD_LIBRARY_PATH"; prefix = "${pkgs.curlFull.out}/lib";}
-    { name = "PKG_CONFIG_PATH"; prefix = "${pkgs.curlFull.out}/lib/pkgconfig";}
+    { name = "LD_LIBRARY_PATH"; prefix = "${pkgs.curlFull.out}/lib:${pkgs.cosmopolitan}/lib";}
+    #{ name = "PKG_CONFIG_PATH"; prefix = "${pkgs.mimalloc.dev}/lib/pkgconfig";}
+    { name = "COSMO_PATH";      prefix = "${pkgs.cosmocc}";}
   ];
 }
