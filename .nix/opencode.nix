@@ -19,6 +19,9 @@
     mcp.nimctx.enabled = true;
     mcp.nimctx.type    = "local";
     mcp.nimctx.command = [ "nimctx" ];
+    mcp.mcpcurl.enabled = true;
+    mcp.mcpcurl.type    = "local";
+    mcp.mcpcurl.command = [ "/home/hugosenari/Code/proccurl/mcpcurl" ];
     agent.ponytail.description = "Ponytail, lazy senior and YAGNI dev mode";
     agent.ponytail.mode = "subagent";
     agent.ponytail.tools.write = true;
