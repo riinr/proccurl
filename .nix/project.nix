@@ -79,7 +79,16 @@
     /tmp/proccurl-ipc-main 08x32 08x32 /tmp/ipc-*.mmap
   '';
   files.alias.build = ''
-    # BUILD proccurl
+    # BUILD all binaries
+    nim c --threads:on -o:bin/proccurl src/proccurl.nim
+    nim c --threads:on -o:bin/mcpcurl src/mcpcurl.nim
+  '';
+  files.alias.build-mcpcurl = ''
+    # BUILD mcpcurl only
+    nim c --threads:on -o:bin/mcpcurl src/mcpcurl.nim
+  '';
+  files.alias.build-proccurl = ''
+    # BUILD proccurl only
     nim c --threads:on -o:bin/proccurl src/proccurl.nim
   '';
   env = [
