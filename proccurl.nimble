@@ -5,10 +5,11 @@ author        = "hugosenari"
 description   = "Curl IPC"
 license       = "MIT"
 srcDir        = "src"
-bin           = @["proccurl"]
+bin           = @["proccurl", "mcpcurl"]
 
 
 # Dependencies
 
 requires "nim >= 2.2.0"
 requires "curly >=1.1.1"
+requires "libcurl >=1.0.0"
