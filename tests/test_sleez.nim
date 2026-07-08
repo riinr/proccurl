@@ -99,3 +99,48 @@ test "spin returns elapsed nanoseconds":
 test "spin with small value uses cpuRelax":
   let elapsed = spin 100.ns
   check elapsed >= 100
+
+test "spin with medium value uses sched_yield":
+  let elapsed = spin 10_000.ns
+  check elapsed >= 10_000
+
+test "progSpin iterates increases time":
+  var count = 0
+  var spinner = progSpin
+  while count < 20:
+    count.inc
+    let elapsed = spinner()
+    if   count <= 3:
+      check elapsed >= 001
+      check elapsed <= 200
+    elif count <= 6:
+      check elapsed >= 100
+      check elapsed <= 400
+    elif count <= 16:
+      check elapsed >= 300
+      check elapsed <= 700
+    elif count <= 18:
+      check elapsed >= 050_000
+      check elapsed <= 200_000
+    elif count <= 20:
+      check elapsed >= 001
+      check elapsed <= 200
+
+
+test "progSpin iterates reset":
+  var count = 0
+  var spinner = progSpin
+  while count < 8:
+    count.inc
+    let elapsed =
+      if count == 7:
+        spinner = progSpin
+        spinner()
+      else:
+        spinner()
+    if   count <= 3 or count > 6:
+      check elapsed >= 001
+      check elapsed <= 200
+    elif count <= 6:
+      check elapsed >= 100
+      check elapsed <= 400

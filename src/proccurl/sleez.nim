@@ -113,25 +113,42 @@ proc sleep*(ns = 1.ns; us = 0.us; ms = 0.ms; s = 0.s): void =
   b.tv_nsec = 0
   discard posix.nanosleep(a, b)
 
-const SPIN_MAX  = 02_000  ## 02us
-const SLEEP_MIN = 50_000  ## 50us
+const SPIN_MAX  = 00_300  ## 
+const YIELD_MAX = 50_000  ## 
+const SLEEP_MIN = 50_001  ## 
 
 proc spin*(ns = 1.ns; us = 0.us; ms = 0.ms; s = 0.s): int64 {.discardable.}=
   ## Loose time doing something sily
   ## Unless it has to loose so much time that a sleep would be worth
-  let t = cast[int64](s + ms + us + ns)
+  let t    = cast[int64](s + ms + us + ns)
   let epch = getMonoTime().ticks
-  result = 0
+  result   = getMonoTime().ticks - epch
   while result < t:
-    if t - result > SLEEP_MIN:  # SPIN as SLEEP 
+    if   t - result <= SPIN_MAX:  # SPIN as CPURELAX
+      cpuRelax()
+    elif t - result <= YIELD_MAX: # SPIN as Context Switching
+      discard posix.sched_yield()
+    elif t          >  YIELD_MAX: # SPIN as SLEEP 
       sleep ns, us, ms, s
-    elif t - result > SPIN_MAX: # SPIN as SYSCALL
-      var interval: Timeval
-      interval.tv_sec  = posix.Time 0
-      interval.tv_usec = cast[int64](su(us + ns))
-      discard close -1
-    cpuRelax()
     result = getMonoTime().ticks - epch
+
+
+iterator progSpin*(): int64 {.closure.} =
+  ## spin progressivelly and repeat
+  ## 1. < 50ns     getMonotimes Op, ask for time and return
+  ## 2. < 300ns    cpuRelax     Op, ask CPU to take it easy
+  ## 3. < 50_000ns sched_yeild  Op, ask kernel to take it easy
+  ## 4. < 50_001ns nanosleep    Op, ask kernel to put it to sleep
+
+  while true:
+    for _ in 0..<3:
+      yield spin(10.ns)
+    for _ in 0..<3:
+      yield spin(100.ns)
+    for _ in 0..<10:
+      yield spin(310.ns)
+    for _ in 0..<2:
+      yield spin(SLEEP_MIN.ns)
 
 
 when isMainModule:
