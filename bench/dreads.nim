@@ -78,7 +78,7 @@ proc top_items*(a, b: ptr int64; clstr, I: int): Top =
   var th5: Pos
 
   for k, v in h.pairs():
-    if v > st1.count:
+    if   v > st1.count:
       th5.time  = th4.time
       th5.count = th4.count
       th4.time  = rd3.time
@@ -126,6 +126,7 @@ template zeroFill(t: int64): string =
   elif t < 100:  "0" & $t
   else:                $t
 
+
 when isMainModule:
   proc helloWorld(args, res: pointer): void =
     cast[ptr int64](res)[] = getMonoTime().ticks
@@ -134,59 +135,66 @@ when isMainModule:
 
   proc main(): void =
     ## Room for work
-    let send  = createShared(int64,  MAX_ITEMS)
-    let sent  = createShared(int64,  MAX_ITEMS)
-    let args  = createShared(int64,  MAX_ITEMS)
-    let res   = createShared(int64,  MAX_ITEMS)
+    let send  = createShared(int64,   MAX_ITEMS)
+    let sent  = createShared(int64,   MAX_ITEMS)
+    let args  = createShared(int64,   MAX_ITEMS)
+    let res   = createShared(int64,   MAX_ITEMS)
     let tasks = createShared(TaskObj, MAX_ITEMS)
-
     let epoc = getMonoTime().ticks
-    let pool  = newPool()
+    let pool = newPool(2, 10)
+    let setu = getMonoTime().ticks
 
     for i in 0..<MAX_ITEMS:
       args[i] = 0
       tasks[i] = TaskObj(
+        idx:  i.int64,
         args: args[i],
         req:  helloWorld,
         res:  res[i],
       )
 
-      send[i] = getMonoTime().ticks
-      args[i] = getMonoTime().ticks
+      res[i] = 0
 
+      send[i][] = getMonoTime().ticks
+      args[i][] = getMonoTime().ticks
       pool.whileSchedule tasks[i].some:
-        args[i] = getMonoTime().ticks
-      sent[i] = getMonoTime().ticks
+        args[i][] = getMonoTime().ticks
+      sent[i][] = getMonoTime().ticks
 
     let tasksSent = getMonoTime().ticks
     pool.whileJoin:
       spin()
 
-
     for i in 0..<MAX_ITEMS:
-      assert tasks[i].isDone, "Task " & $i & " not DONE but " & $tasks[i].stat.load
+      assert tasks[i].isDone, "Task " & $i & " not DONE but " & $tasks[i].stat.load & " and res is " & $res[i][]
 
     let ta = getMonoTime().ticks
 
-    let (st11, nd21, rd31, th41, th51) = top_items(sent, res,  150, MAX_ITEMS)
-    let (st12, nd22, rd32, th42, th52) = top_items(send, sent, 150, MAX_ITEMS)
 
     echo "Tasks:    \t", MAX_ITEMS
-    echo "Setup:    \t", (send[0][] - epoc).ns, "\t", "         \t", "Initializing"
-    echo "Send  100%:\t", (tasksSent - args[0][]).ns,   ((tasksSent - args[0][]) div MAX_ITEMS).ns, "/task\t", "To schedule tasks"
-    echo "Send   ", st12.perc, ":\t", (st12.time - 149).ns, "~", st12.time, "ns", "\t", st12.count.zeroFill, " tasks\t"
-    echo "Send   ", nd22.perc, ":\t", (nd22.time - 149).ns, "~", nd22.time, "ns", "\t", nd22.count.zeroFill, " tasks\t"
-    echo "Send   ", rd32.perc, ":\t", (rd32.time - 149).ns, "~", rd32.time, "ns", "\t", rd32.count.zeroFill, " tasks\t"
-    echo "Send   ", th42.perc, ":\t", (th42.time - 149).ns, "~", th42.time, "ns", "\t", th42.count.zeroFill, " tasks\t"
-    echo "Send   ", th52.perc, ":\t", (th52.time - 149).ns, "~", th52.time, "ns", "\t", th52.count.zeroFill, " tasks\t"
-    echo "Latency ", st11.perc, ":\t", (st11.time - 149).ns, "~", st11.time, "ns", "\t", st11.count.zeroFill, " tasks\t"
-    echo "Latency ", nd21.perc, ":\t", (nd21.time - 149).ns, "~", nd21.time, "ns", "\t", nd21.count.zeroFill, " tasks\t"
-    echo "Latency ", rd31.perc, ":\t", (rd31.time - 149).ns, "~", rd31.time, "ns", "\t", rd31.count.zeroFill, " tasks\t"
-    echo "Latency ", th41.perc, ":\t", (th41.time - 149).ns, "~", th41.time, "ns", "\t", th41.count.zeroFill, " tasks\t"
-    echo "Latency ", th51.perc, ":\t", (th51.time - 149).ns, "~", th51.time, "ns", "\t", th51.count.zeroFill, " tasks\t"
+    echo "Setup:    \t", (setu - epoc).ns, "\t", "         \t"
+    
+    var range = 200
+    let (st12, nd22, rd32, th42, th52) = top_items(send, sent, range, MAX_ITEMS)
+    if st12.count > 0: echo "Send¹   ",  st12.perc, ":\t", (st12.time - range).ns, "~", st12.time.ns, "\t", st12.count.zeroFill, " tasks"
+    if nd22.count > 0: echo "Send¹   ",  nd22.perc, ":\t", (nd22.time - range).ns, "~", nd22.time.ns, "\t", nd22.count.zeroFill, " tasks"
+    if rd32.count > 0: echo "Send¹   ",  rd32.perc, ":\t", (rd32.time - range).ns, "~", rd32.time.ns, "\t", rd32.count.zeroFill, " tasks"
+    if th42.count > 0: echo "Send¹   ",  th42.perc, ":\t", (th42.time - range).ns, "~", th42.time.ns, "\t", th42.count.zeroFill, " tasks"
+    if th52.count > 0: echo "Send¹   ",  th52.perc, ":\t", (th52.time - range).ns, "~", th52.time.ns, "\t", th52.count.zeroFill, " tasks"
+    echo "Total sending:\t", (tasksSent - args[0][]).ns,   ((tasksSent - args[0][]) div MAX_ITEMS).ns, "/task\t", "To schedule tasks"
+
+    range = 100_000
+    let (st11, nd21, rd31, th41, th51) = top_items(args, res, range, MAX_ITEMS)
+    if st11.count > 0: echo "Latency² ", st11.perc, ":\t", (st11.time - range).ns, "~", st11.time.ns, "\t", st11.count.zeroFill, " tasks"
+    if nd21.count > 0: echo "Latency² ", nd21.perc, ":\t", (nd21.time - range).ns, "~", nd21.time.ns, "\t", nd21.count.zeroFill, " tasks"
+    if rd31.count > 0: echo "Latency² ", rd31.perc, ":\t", (rd31.time - range).ns, "~", rd31.time.ns, "\t", rd31.count.zeroFill, " tasks"
+    if th41.count > 0: echo "Latency² ", th41.perc, ":\t", (th41.time - range).ns, "~", th41.time.ns, "\t", th41.count.zeroFill, " tasks"
+    if th51.count > 0: echo "Latency² ", th51.perc, ":\t", (th51.time - range).ns, "~", th51.time.ns, "\t", th51.count.zeroFill, " tasks"
+
     echo "Join:     \t", (ta - tasksSent).ns, "\t", "         \t", "Waiting all tasks to complete"
     echo "Snd+Join: \t", (ta - args[0][]).ns, ((ta - args[0][]) div MAX_ITEMS).ns, "/task\t", "Send + Join"
     echo "Total:    \t", (ta - epoc).ns
+    echo "\n¹ How much time main thread locked scheduling the task\n² How long took to any thread work on task"
  
 
     freeShared res

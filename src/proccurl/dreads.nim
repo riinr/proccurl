@@ -69,7 +69,6 @@ runnableExamples:
 
     # do something with result
     assert task.isDone, "Task not DONE but " & $task.stat
-    echo "Res: ", res[]
 
     # free resources before we left the function
     defer:
@@ -105,7 +104,7 @@ runnableExamples:
     # do something with result
     for i in 0..<MAX_ITEMS:
       assert tasks[i].isDone, "Task " & $i & " not DONE but " & $tasks[i].stat
-      echo i, ": ", resp[0][]
+      debugEcho i, ": ", resp[0][]
 
     # free resources before we left the function
     defer:
@@ -146,9 +145,9 @@ runnableExamples:
     # wait until the task complete
     waitTask task:
       # return control to asyncdispatch
-      echo getMonoTime().ticks - arg[]
+      debugEcho getMonoTime().ticks - arg[]
       await sleepAsync(0)
-      echo getMonoTime().ticks - arg[]
+      debugEcho getMonoTime().ticks - arg[]
 
     # do something with result
     return res[]
@@ -160,7 +159,7 @@ runnableExamples:
 
     arrayExample pool
     singleExample pool
-    echo "Async: ", waitFor asyncExample(pool)
+    debugEcho "Async: ", waitFor asyncExample(pool)
 
     # free resources before we left the function
     defer:
@@ -172,12 +171,13 @@ runnableExamples:
   main()
 
 
-const WORKER_SLOTS* {.intdefine: "dreads.workerslots".} = 64
-const TASK_SLOTS*  {.intdefine: "dreads.taskslots".}  = 1024
+const WORKER_SLOTS* {.intdefine: "dreads.workerslots".} = 1024
+const TASK_SLOTS*   {.intdefine: "dreads.taskslots".}   = 1024
 
 type
   WorkerStat = enum
     ## STATE MACHINE: DONE -> TAKEN -> TO DO -> RUNNING -> DONE
+    WSDEAD,  ## thread isn't running
     WSDONE,  ## thread is free to work
     WSTAKEN, ## thread was taken by someone
     WSTODO,  ## thread has task to run
@@ -191,8 +191,15 @@ type
     SENT,          ## Task was sent to thread to work
     WIP,           ## thread is working on Task
     DONE,          ## thread completed Task work
+   
+  PoolStat* = enum
+    ## STATE MACHINE: DEAD -> RUN -> JOIN -> DEAD
+    PSDEAD,        ## Task is new
+    PSRUN,         ## Task was sent to alt queue to be sent later
+    PSJOIN,        ## Task was sent to thread to work
 
   TaskObj* = object
+    idx*:  int64
     stat*: Atomic[Stat]
     args*: pointer
     res*:  pointer
@@ -204,28 +211,42 @@ type
     ## When we are unsure about the state of thread
     ## This object should be single thread
     ## but hold shared info like stat and task
-    stat:   Atomic[int]         ## thread status
+    stat: Atomic[int]   ## thread status
     task: Option[Task]  ## thread task/response
+    pool: Pool
+    thr:  Thread[SharedWorker]
 
   SharedWorker = ptr WorkerThread
 
-  WorkerQueue = Queue[WORKER_SLOTS, MP[WORKER_SLOTS], SC[WORKER_SLOTS], SharedWorker]
-  TaskQueue = Queue[TASK_SLOTS, MP[TASK_SLOTS], SC[TASK_SLOTS], Task]
+  WorkerQueue = Queue[WORKER_SLOTS, MP[WORKER_SLOTS], MC[WORKER_SLOTS], SharedWorker]
+  TaskQueue   = Queue[TASK_SLOTS,   MP[TASK_SLOTS],   MC[TASK_SLOTS],   Task]
 
-  Pool* = object
-    epoch: int64
-    wq:    ptr WorkerQueue
-    tq:    ptr TaskQueue
-    thr:   ptr Thread[ptr Pool]
-    numThreads: ptr Atomic[int]
-    minThreads: int
-    maxThreads: int
-    stopped: Atomic[bool]
+  PoolObject* = object
+    epoch*:      int64
+    numThreads:  Atomic[int]
+    state:       Atomic[int]
+    minThreads:  int
+    maxThreads:  int
+    thrMng:      Thread[Pool]
+    workerQueue: WorkerQueue
+    taskQueue:   TaskQueue
+    workers:     UncheckedArray[WorkerThread]
 
-proc `=copy`(dest: var TaskObj; o: TaskObj) {.error.}= discard
+  Pool = ptr PoolObject
+
+
+proc `=copy`*(dest: var TaskObj; o: TaskObj) {.error.} = discard
+
+
+proc `$`*(task: Task): string =
+  $cast[int64](task) & ":" & $task.idx
+
+proc `$`*(worker: SharedWorker): string =
+  $cast[int64](worker)
 
 proc isDone*(task: Task): bool =
   task.stat.load(moRelaxed) == DONE
+
 
 template waitTask*(task: Task; op: untyped): void =
   var stat {.inject.} = task.stat.load(moRelaxed)
@@ -233,69 +254,36 @@ template waitTask*(task: Task; op: untyped): void =
     op
     stat = task.stat.load(moRelaxed)
 
+
 using
-  pool: ptr Pool
+  pool: Pool
+
 
 template len(q: ptr WorkerQueue): int =
   let p = cast[uint32](q.producer)
   let c = cast[uint32](q.consumer)
   cast[int]((p - c + WORKER_SLOTS) mod WORKER_SLOTS)
 
+
 template len(q: ptr TaskQueue): int =
   let p = cast[uint32](q.producer)
   let c = cast[uint32](q.consumer)
   cast[int]((p - c + TASK_SLOTS) mod TASK_SLOTS)
 
-proc stop(pool): void {.inline.} =
-  pool.stopped.store(true, moRelaxed)
 
-template freePool*(pool: ptr Pool): void =
-  freeShared pool.wq
-  freeShared pool.tq
-  freeShared pool.thr
-  freeShared pool.numThreads
+template freePool*(pool): void =
   freeShared pool
 
+
 template whileJoin*(pool; op: untyped): void =
-  pool.stop
-  while pool.numThreads[].load > 0:
+  pool.state.store(PSJOIN.int.static, moRelaxed)
+  while pool.numThreads.load > 0:
     op
 
-converter threads(pool): ptr WorkerQueue = pool.wq
-
-converter tasks(pool): ptr TaskQueue = pool.tq
-
-proc dup(pool; thr: ptr Thread[ptr Pool]): ptr Pool =
-  result = createShared(Pool)
-  result.epoch = getMonoTime().ticks
-  result.wq    = pool.wq
-  result.tq    = pool.tq
-  result.thr   = thr
-  result.numThreads = pool.numThreads
-  result.minThreads = pool.minThreads
-  result.maxThreads = pool.maxThreads
 
 using
-  thr: ptr WorkerThread
+  thr: SharedWorker
 
-template initSharedWorker(thr): void = thr[].stat.store WSDONE.int.static
-
-proc invoke(thr): int =
-  ## Execute the task
-  ## Return false if thread was available
-  result = WSTODO.int.static
-  if thr.stat.compareExchange(result, WSWIP.int.static, moAcquire, moRelaxed):
-    try:
-      if thr.task.isSome:
-        var expcted = SENT
-        doAssert thr.task.get.stat.compareExchange(expcted, WIP, moAcquire, moRelaxed)
-        thr.task.get.req thr.task.get.args, thr.task.get.res
-    finally:
-      if thr.task.isSome:
-        var expcted = WIP
-        doAssert thr.task.get.stat.compareExchange(expcted, DONE, moRelease, moRelaxed)
-      var expected = WSWIP.int.static
-      doAssert thr.stat.compareExchange(expected, WSDONE.int.static, moRelease, moRelaxed)
 
 proc schedule(thr; task: sink Option[Task]): Option[Task] =
   var expected = WSDONE.int.static
@@ -311,25 +299,33 @@ proc schedule(thr; task: sink Option[Task]): Option[Task] =
     const desired = WSTODO.int.static
     doAssert thr.stat.compareExchange(expected, desired, moRelease, moRelaxed)
 
+
 proc scheduleDie(thr): bool =
   var  expected = WSDONE.int.static
   const desired = WSTAKEN.int.static
-  result = thr.stat.compareExchange(expected, desired, moAcquire, moRelaxed)
+  result = thr.stat.compareExchange(expected, desired, moAcquire, moRelaxed) or
+    expected == WSDEAD.int.static or
+    expected == WSDIE.int.static
   if result:
     thr.stat.store WSDIE.int.static
 
-proc schedule(q: ptr WorkerQueue; task: sink Option[Task]): Option[Task] =
+
+proc schedule(wq: ptr WorkerQueue; task: sink Option[Task]): Option[Task] =
   ## Because task cannot have copies
   ## Returns the task if no thread is available
   ## Returns none(task) if operation succeed
   result = task
   if result.isSome:
-    let optThr = dequeue(q, SharedWorker)
+    let optThr = wq.dequeue(SharedWorker)
     if optThr.isSome:
-      while result.isSome:
+      var spinner = progSpin
+      while result.isSome and
+          optThr.get.stat.load(moRelaxed) != WSDIE.int.static and
+          optThr.get.stat.load(moRelaxed) != WSDEAD.int.static:
         result = optThr.get.schedule result
         if result.isSome:
-          spin()
+          discard spinner()
+
 
 proc schedule(tq: ptr TaskQueue; task: sink Option[Task]): Option[Task] =
   ## Because task cannot have copies
@@ -337,140 +333,170 @@ proc schedule(tq: ptr TaskQueue; task: sink Option[Task]): Option[Task] =
   ## Returns none(task) if operation succeed
   if task.isSome:
     task.get.stat.store ENQUEUED
-    if not enqueue(tq, task.get):
+    if not tq.enqueue(task.get):
       task.get.stat.store NEW
       return task
+
   return none[Task]()
 
+
 proc schedule*(pool; task: sink Option[Task]): Option[Task] =
-  result = pool.threads.schedule task
+  result = pool.workerQueue.addr.schedule task
   if result.isSome:
-    result = pool.tasks.schedule result
+    result = pool.taskQueue.addr.schedule result
+
 
 proc schedule*(pool; task: Task): bool =
   pool.schedule(task.some).isNone
 
+
 template whileSchedule*(pool; v: sink Option[Task]; op: untyped): void =
   var vv = v
-  while vv.isSome and not pool.stopped.load(moRelaxed):
+
+  while vv.isSome and pool.state.load(moRelaxed) != PSDEAD.int.static:
     vv = pool.schedule vv
     if vv.isSome:
       op
 
-proc scheduleDie*(q: ptr WorkerQueue): bool =
-  let optT = dequeue(q, SharedWorker)
+
+proc scheduleDie*(wq: ptr WorkerQueue): bool =
+  let optT = wq.dequeue(SharedWorker)
   result = optT.isSome
   if result:
     let thr = optT.get
+    var spinner = progSpin
     while not thr.scheduleDie:
-      spin()
+      discard spinner()
 
-proc threadWorker(pool) {.thread.} =
-  var myInit = getMonoTime().ticks
-  let myCost = myInit - pool.epoch
 
-  let self = createShared(WorkerThread)
-  self.initSharedWorker
+proc enqueue(thr): void =
+  var spinner = progSpin
+  var t = thr
+  while thr.pool.workerQueue.addr.enqueue t:
+    discard spinner()
+
+
+proc invoke(thr): int =
+  ## Execute the task
+  ## Return state if thread was available
+  result = WSTODO.int.static
+  if thr.stat.compareExchange(result, WSWIP.int.static, moAcquireRelease, moRelaxed):
+    if thr.task.isSome:
+      try:
+        var expcted = SENT
+        doAssert thr.task.get.stat.compareExchange(expcted, WIP, moAcquire, moRelaxed)
+        thr.task.get.req thr.task.get.args, thr.task.get.res
+      finally:
+        var expcted = WIP
+        doAssert thr.task.get.stat.compareExchange(expcted, DONE, moRelease, moRelaxed)
+    var expected = WSWIP.int.static
+    doAssert thr.stat.compareExchange(expected, WSDONE.int.static, moAcquireRelease, moRelaxed)
+
+
+proc threadWorker(thr) {.thread.} =
+  for i in 0..<thr.pool.maxThreads:
+    if thr.pool.numThreads.load(moRelaxed) < thr.pool.maxThreads and
+       thr.pool.numThreads.load(moRelaxed) < thr.pool.taskQueue.addr.len:
+      var expected = WSDEAD.int.static
+      if thr.pool.workers[i].stat.compareExchange(expected, WSDONE.int.static, moAcquireRelease, moRelaxed):
+        thr.pool.numThreads.atomicInc
+        thr.pool.workers[i].pool = thr.pool
+        createThread thr.pool.workers[i].thr, threadWorker, thr.pool.workers[i].addr
+        break
+    else:
+      break
+  
+  # var task: Option[Task]
+  # while true:
+  #   task = thr.pool.taskQueue.addr.dequeue(Task)
+  #   if task.isSome:
+  #     task = thr.schedule(task)
+  #     assert task.isNone
+  #     discard thr.invoke
+  #   else:
+  #     break
+
+  var spinner = progSpin
 
   # Enqueue this thread as resource
-  var s = self
-  while not pool.wq.enqueue(s):
-    spin()
+  thr.enqueue()
 
   var oldStat = -1
   while true:
-    cpuRelax()
-    oldStat = self.invoke
+    oldStat = thr.invoke
 
-    if oldStat == WSDIE.int.static:
+    if oldStat == WSDIE.int.static or thr.pool.state.load(moRelaxed) == PSDEAD.int.static:
       break
 
     # Enequeue this thread back
     if oldStat == WSTODO.int.static:
-      var s2 = self
-      while not pool.wq.enqueue(s2):
-        spin()
-      myInit = getMonoTime().ticks
+      thr.enqueue()
+      spinner = progSpin
       continue
 
-    # spin my creation cost
-    if getMonoTime().ticks - myInit < myCost:
-      spin()
-      continue
-
-    # spin more because someone is almost scheduling a task
+    # reset spinner because someone is almost scheduling a task
     if oldStat == WSTAKEN.int.static:
-      spin()
-      continue
+      spinner = progSpin
 
-    if oldStat == WSDONE.int.static and pool.stopped.load(moRelaxed) and pool.wq.len == 0:
-      break
-
-    sleep()
-    myInit = getMonoTime().ticks
+    discard spinner()
 
   defer:
-    pool.numThreads[].atomicDec
-    pool.thr.freeShared
-    pool.freeShared
-    self.freeShared
+    thr.stat.store(WSDEAD.int.static, moAcquireRelease)
+    thr.pool.numThreads.atomicDec
+
 
 proc threadManager(pool) {.thread.} =
-  var myInit = getMonoTime().ticks
-  let myCost = myInit - pool.epoch
+  pool.state.store(PSRUN.int.static, moRelaxed)
+  var spinner = progSpin
   var task = none[Task]()
   while true:
-    # too fewer threads, scalling up
-    if pool.threads.len < pool.minThreads and
-       pool.numThreads[].load(moRelaxed) < pool.maxThreads:
-      pool.numThreads[].atomicInc
-      let t = createShared Thread[ptr Pool]
-      createThread t[], threadWorker, pool.dup t
-      myInit = getMonoTime().ticks
+    if pool.state.load(moRelaxed) == PSJOIN.int.static and pool.taskQueue.addr.len == 1:
+      break
+    elif pool.numThreads.load(moRelaxed) < pool.minThreads or
+          (pool.numThreads.load(moRelaxed) < pool.maxThreads and
+           pool.taskQueue.addr.len > pool.numThreads.load(moRelaxed)):
+      # fewer threads, scalling up
+      for i in 0..<pool.maxThreads:
+        var expected = WSDEAD.int.static
+        if pool.workers[i].stat.compareExchange(expected, WSDONE.int.static, moAcquireRelease, moRelaxed):
+          pool.numThreads.atomicInc
+          pool.workers[i].pool = pool
+          createThread pool.workers[i].thr, threadWorker, pool.workers[i].addr
+          break
+    elif pool.taskQueue.addr.len == 0 and pool.workerQueue.addr.len > pool.minThreads:
+      discard pool.workerQueue.addr.scheduleDie
 
     if task.isNone:
-      task = dequeue(pool.tq, Task)
-    
+      task = pool.taskqueue.addr.dequeue(Task)
+
     if task.isSome:
-      task = pool.wq.schedule task
+      spinner = progspin
+      task = pool.workerqueue.addr.schedule task
       continue
 
-    # too many threads, scalling down
-    if pool.tasks.len == 0 and pool.threads.len > pool.minThreads:
-      # spin my creation cost
-      if getMonoTime().ticks - myInit < myCost:
-        continue
+    discard spinner()
 
-      spin(20.us)
-      myInit = getMonoTime().ticks
-      
-      if pool.tasks.len == 0 and pool.threads.len > pool.minThreads:
-        discard pool.wq.scheduleDie
-
-    spin 100.ns
-
-    if pool.tasks.len == 0 and pool.stopped.load(moRelaxed):
-      break
-
-  while pool.tasks.len > 0:
+  spinner = progSpin
+  while pool.taskQueue.addr.len > 0:
     if task.isNone:
-      task = dequeue(pool.tq, Task)
+      task = pool.taskQueue.addr.dequeue(Task)
   
     if task.isSome:
-      task = pool.wq.schedule task
-    spin()
+      task = pool.workerQueue.addr.schedule task
+    discard spinner()
 
-  while pool.numThreads[].load > 1:
-    discard pool.wq.scheduleDie
-    spin()
+  spinner = progSpin
+  while pool.numThreads.load(moRelaxed) > 1:
+    pool.state.store(PSDEAD.int.static, moRelaxed)
+    discard pool.workerQueue.addr.scheduleDie
+    discard spinner()
 
   defer:
-    pool.numThreads[].atomicDec
+    pool.numThreads.atomicDec
+
 
 proc initPool*(
-  pool: ptr Pool;
-  threadMngr:  ptr Thread[ptr Pool];
-  numThreads:  ptr Atomic[int];
+  pool: Pool;
   minThreads: int = 4;
   maxThreads: int = 8): void =
   ## Init a thread pool of minThreads up to maxThreads
@@ -482,25 +508,22 @@ proc initPool*(
   ## Must be +2 greater than `minThreads`. 
   ##
   ## Usually it keeps `minThreads` running.
-
   assert minThreads + 2 < maxThreads, "maxThreads must be greater than minThreads + 2"
-  assert maxThreads <= WORKER_SLOTS, "maxThreads exceeds WORKER_SLOTS"
+  assert maxThreads <= WORKER_SLOTS,  "maxThreads exceeds WORKER_SLOTS"
   pool.epoch = getMonoTime().ticks
-  pool.wq    = newQueue[WORKER_SLOTS, MP[WORKER_SLOTS], SC[WORKER_SLOTS], SharedWorker]()
-  pool.tq    = newQueue[TASK_SLOTS, MP[TASK_SLOTS], SC[TASK_SLOTS], Task]()
-  pool.thr   = threadMngr
-  pool.numThreads = numThreads
   pool.minThreads = minThreads
   pool.maxThreads = maxThreads
-  pool.stopped.store false
-  pool.numThreads[].store 1
+  pool.state.store(PSRUN.int.static)
+  pool.numThreads.store(0, moRelaxed)
+
   createThread(
-    threadMngr[],
+    pool.thrMng,
     threadManager,
-    pool,
+    pool
   )
 
-proc newPool*(minThreads: int = 4; maxThreads: int = 8): ptr Pool {.discardable.} =
+
+proc newPool*(minThreads: int = 4; maxThreads: int = 8): Pool {.discardable.} =
   ## Create a thread pool of minThreads up to maxThreads
   ##
   ## `minThreads` is the minimum free threads system starts to creating a more thread.
@@ -511,11 +534,13 @@ proc newPool*(minThreads: int = 4; maxThreads: int = 8): ptr Pool {.discardable.
   ##
   ## Usually it keeps `minThreads` running.
 
-  result = createShared(Pool)
+  let memory  = createShared(byte, 
+    sizeof(PoolObject) + (sizeOf(WorkerThread) * maxThreads)
+  )
+  result = cast[Pool](memory)
+  #result.workers = cast[UncheckedArray[WorkerThread]](cast[int64]())
   initPool(
     result,
-    createShared(Thread[ptr Pool]),
-    createShared(Atomic[int]),
     minThreads,
     maxThreads
   )
