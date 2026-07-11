@@ -75,8 +75,9 @@ when isMainModule:
     let ta = getMonoTime().ticks
 
 
-    echo "Tasks:    \t", MAX_ITEMS
-    echo "Setup:    \t", (setu - epoc).ns, "\t", "         \t"
+    printMdHeader()
+    echo "| Tasks |  |  |  | ", MAX_ITEMS, " tasks |"
+    echo "| Setup |  | ", (setu - epoc).ns, " |  |  |"
     
     var range = 50
     let (st12, nd22, rd32, th42, th52) = top_items(cast[ptr UncheckedArray[int64]](send), cast[ptr UncheckedArray[int64]](sent), range, MAX_ITEMS)
@@ -88,8 +89,15 @@ when isMainModule:
     printCluster(st11, nd21, rd31, th41, th51, range, "Latency² ")
 
     printJoinSummary(ta - tasksSent, ta - send[0][], ta - epoc, MAX_ITEMS)
-    echo "\n¹ How much time main thread locked scheduling the task\n² How long took to any thread work on task"
  
+    echo """
+    
+    Is dreads, but using [loony](https://github.com/nim-works/loony) instead of my own implementation of RingBuffer.
+
+    Since Loony is super fast, keep it simple and use only the task queue for scheduling tasks.
+
+    Idea behind dreads was reduce contention, but loony has other ways to make things fast:.
+    """
 
     freeShared res
     freeShared args

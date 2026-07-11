@@ -75,8 +75,9 @@ when isMainModule:
     let ta = getMonoTime().ticks
 
 
-    echo "Tasks:    \t", MAX_ITEMS
-    echo "Setup:    \t", (setu - epoc).ns, "\t", "         \t"
+    printMdHeader()
+    echo "| Tasks |  |  |  | ", MAX_ITEMS, " tasks |"
+    echo "| Setup |  | ", (setu - epoc).ns, " |  |  |"
     
     var range = 200
     let (st12, nd22, rd32, th42, th52) = top_items(cast[ptr UncheckedArray[int64]](send), cast[ptr UncheckedArray[int64]](sent), range, MAX_ITEMS)
@@ -88,8 +89,14 @@ when isMainModule:
     printCluster(st11, nd21, rd31, th41, th51, range, "Latency² ")
 
     printJoinSummary(ta - tasksSent, ta - args[0][], ta - epoc, MAX_ITEMS)
-    echo "\n¹ How much time main thread locked scheduling the task\n² How long took to any thread work on task"
  
+
+    echo """
+
+    Same idea of dreads_loony, but instead of removing Workers queue from Dreads, it removes TaskQueue from Dreads.
+
+    Means no fallback to taskqueue, only direct assign to workers in queue.
+    """
 
     freeShared res
     freeShared args

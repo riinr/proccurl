@@ -27,6 +27,11 @@ converter sm* (t: NanoSeconds):  MiliSeconds  = cast[MiliSeconds ](cast[int64](t
 converter sm* (t: MicroSeconds): MiliSeconds  = cast[MiliSeconds ](cast[int64](t) div 1000)
 converter su* (t: NanoSeconds):  MicroSeconds = cast[MicroSeconds](cast[int64](t) div 1000)
 
+template positive(t: int64): int64 =
+  if t < 0:
+    t * -1
+  else:
+    t
 
 template zeroFill(t: int64): string =
   if   t < 010: "00" & $t
@@ -34,27 +39,23 @@ template zeroFill(t: int64): string =
   else:                $t
 
 converter `$`*(t: Seconds):      string =
-  result = if cast[int64](t) != 0: "\e[31m" else: "\e[30m"
-  result = result & cast[int64](t).zeroFill & "s"
-  result = result & "\e[0m"
+  result = ""
+  if cast[int64](t) != 0: 
+    result = result & cast[int64](t).positive.zeroFill & "s"
 
 converter `$`*(t: MiliSeconds):  string =
   result = $t.ss
-  result = result & (if cast[int64](t) != 0: "\e[33m" else: "\e[30m")
-  result = result & (cast[int64](t) - cast[int64](t.ss.ms)).zeroFill & "ms"
-  result = result & "\e[0m"
+  if result != "" or (cast[int64](t) - cast[int64](t.ss.ms)) != 0:
+    result = result & (cast[int64](t) - cast[int64](t.ss.ms)).positive.zeroFill & "ms"
 
 converter `$`*(t: MicroSeconds): string =
   result = $t.sm
-  result = result & (if cast[int64](t) != 0: "\e[34m" else: "\e[30m")
-  result = result & (cast[int64](t) - cast[int64](t.sm.us)).zeroFill & "us"
-  result = result & "\e[0m"
+  if result != "" or (cast[int64](t) - cast[int64](t.ms.us)) != 0:
+    result = result & (cast[int64](t) - cast[int64](t.sm.us)).positive.zeroFill & "us"
 
 converter `$`*(t: NanoSeconds):  string =
   result = $t.su
-  result = result & (if cast[int64](t) != 0: "\e[32m" else: "\e[30m")
-  result = result & (cast[int64](t) - cast[int64](t.su.ns)).zeroFill & "ns"
-  result = result & "\e[0m"
+  result = result & (cast[int64](t) - cast[int64](t.su.ns)).positive.zeroFill & "ns"
 
 
 using 

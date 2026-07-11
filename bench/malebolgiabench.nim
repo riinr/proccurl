@@ -55,8 +55,9 @@ when isMainModule:
 
     let ta = getMonoTime().ticks
 
-    echo "Tasks:    \t", MAX_ITEMS
-    echo "Setup:    \t", (setu - epoc).ns, "\t", "Malebolgia setup wasn't properly measured\t"
+    printMdHeader()
+    echo "| Tasks |  |  |  | ", MAX_ITEMS, " tasks |"
+    echo "| Setup |  | ", (setu - epoc).ns, " |  | Malebolgia setup wasn't properly measured |"
 
     var range = 800
     let (st12, nd22, rd32, th42, th52) = top_items(send_all, sent_all, range, MAX_ITEMS)
@@ -68,7 +69,11 @@ when isMainModule:
     printCluster(st11, nd21, rd31, th41, th51, range, "Latency² ")
 
     printJoinSummary(ta - tasksSent, ta - send_all[0], ta - epoc, MAX_ITEMS)
-    echo "\n¹ How much time main thread locked scheduling the task\n² How long took to any thread work on task"
+
+    echo """
+
+    Same benchmark, using [Malebolgia](https://github.com/Araq/malebolgia)
+    """
 
     deallocShared(send_all)
     deallocShared(sent_all)

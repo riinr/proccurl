@@ -1,4 +1,5 @@
 import std/tables
+import std/strutils
 import proccurl/sleez
 
 type
@@ -95,19 +96,24 @@ template zeroFill*(t: int64): string =
   else:                $t
 
 
+proc printMdHeader* =
+  echo "| Section | % | Time | Avg | Description |"
+  echo "|---|---:|---:|---:|---|"
+
+
 proc printCluster*(st, nd, rd, th, fth: Pos; rng: int; label: string) =
-  if st.count > 0: echo label, st.perc, ":\t", (st.time - rng).ns, "~", st.time.ns, "\t", st.count.zeroFill, " tasks"
-  if nd.count > 0: echo label, nd.perc, ":\t", (nd.time - rng).ns, "~", nd.time.ns, "\t", nd.count.zeroFill, " tasks"
-  if rd.count > 0: echo label, rd.perc, ":\t", (rd.time - rng).ns, "~", rd.time.ns, "\t", rd.count.zeroFill, " tasks"
-  if th.count > 0: echo label, th.perc, ":\t", (th.time - rng).ns, "~", th.time.ns, "\t", th.count.zeroFill, " tasks"
-  if fth.count > 0: echo label, fth.perc, ":\t", (fth.time - rng).ns, "~", fth.time.ns, "\t", fth.count.zeroFill, " tasks"
+  if st.count > 0: echo "| ", label.strip, " | ", st.perc, " | ", (st.time - rng).ns, "~", st.time.ns, " |  | ", st.count.zeroFill, " tasks |"
+  if nd.count > 0: echo "| ", label.strip, " | ", nd.perc, " | ", (nd.time - rng).ns, "~", nd.time.ns, " |  | ", nd.count.zeroFill, " tasks |"
+  if rd.count > 0: echo "| ", label.strip, " | ", rd.perc, " | ", (rd.time - rng).ns, "~", rd.time.ns, " |  | ", rd.count.zeroFill, " tasks |"
+  if th.count > 0: echo "| ", label.strip, " | ", th.perc, " | ", (th.time - rng).ns, "~", th.time.ns, " |  | ", th.count.zeroFill, " tasks |"
+  if fth.count > 0: echo "| ", label.strip, " | ", fth.perc, " | ", (fth.time - rng).ns, "~", fth.time.ns, " |  | ", fth.count.zeroFill, " tasks |"
 
 
 proc printTotalSending*(total, perTask: int64) =
-  echo "Total sending:\t", total.ns, perTask.ns, "/task\t", "To schedule tasks"
+  echo "| Total sending |  | ", total.ns, " | ", perTask.ns, "/task | To schedule tasks |"
 
 
 proc printJoinSummary*(join, sndJoin, total: int64; n: int) =
-  echo "Join:     \t", join.ns, "\t", "         \t", "Waiting all tasks to complete"
-  echo "Snd+Join: \t", sndJoin.ns, (sndJoin div n).ns, "/task\t", "Send + Join"
-  echo "Total:    \t", total.ns
+  echo "| Join |  | ", join.ns, " |  | Waiting all tasks to complete |"
+  echo "| Snd+Join |  | ", sndJoin.ns, " | ", (sndJoin div n).ns, "/task | Send + Join |"
+  echo "| Total |  | ", total.ns, " |  |  |"

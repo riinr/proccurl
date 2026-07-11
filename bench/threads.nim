@@ -59,8 +59,9 @@ when isMainModule:
     let ta = getMonoTime().ticks
 
 
-    echo "Tasks:    \t", MAX_ITEMS
-    echo "Setup:    \t", (setu - epoc).ns, "\t", "         \t"
+    printMdHeader()
+    echo "| Tasks |  |  |  | ", MAX_ITEMS, " tasks |"
+    echo "| Setup |  | ", (setu - epoc).ns, " |  |  |"
     
     var range = 10000
     let (st12, nd22, rd32, th42, th52) = top_items(cast[ptr UncheckedArray[int64]](send), cast[ptr UncheckedArray[int64]](sent), range, MAX_ITEMS)
@@ -76,7 +77,13 @@ when isMainModule:
     printCluster(st11, nd21, rd31, th41, th51, range, "Latency² ")
 
     printJoinSummary(ta - tasksSent, ta - send[0][], ta - epoc, MAX_ITEMS)
-    echo "\n¹ How much time main thread locked scheduling the task\n² How long took to any thread work on task"
+
+    echo """
+
+    Naive thread implementation, no pool, just thread creation for each task
+
+    The main issue with this version, is that createThread, blocks the mainThread.
+    """
  
     #echo plot(sendCost)
     freeShared send

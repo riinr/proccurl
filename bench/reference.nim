@@ -32,14 +32,21 @@ when isMainModule:
     let (st11, nd21, rd31, th41, th51) = top_items(cast[ptr UncheckedArray[int64]](sent), cast[ptr UncheckedArray[int64]](res), 2, MAX_ITEMS)
     let (st12, nd22, rd32, th42, th52) = top_items(cast[ptr UncheckedArray[int64]](send), cast[ptr UncheckedArray[int64]](sent), 2, MAX_ITEMS)
 
-    echo "Tasks:    \t", MAX_ITEMS
-    echo "Setup:    \t", (send[0][] - epoc).ns, "\t", "         \t", "Initializing"
-    echo "Send  100%:\t", (tasksSent - args[0][]).ns,   "\t", ((tasksSent - args[0][]) div MAX_ITEMS).ns, "/task\t", "To schedule tasks"
+    printMdHeader()
+    echo "| Tasks |  |  |  | ", MAX_ITEMS, " tasks |"
+    echo "| Setup |  | ", (send[0][] - epoc).ns, " |  | Initializing |"
+    echo "| Send 100% |  | ", (tasksSent - args[0][]).ns, " | ", ((tasksSent - args[0][]) div MAX_ITEMS).ns, "/task | To schedule tasks |"
     printCluster(st12, nd22, rd32, th42, th52, 2, "Send   ")
     printCluster(st11, nd21, rd31, th41, th51, 2, "Latency ")
 
     printJoinSummary(ta - tasksSent, ta - args[0][], ta - epoc, MAX_ITEMS)
  
+    echo """
+
+    This version, doesn't use any asynch/thread feature, just function call
+
+    We are light years away from this.
+    """
 
     freeShared res
     freeShared args
