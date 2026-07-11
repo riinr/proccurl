@@ -80,24 +80,14 @@ when isMainModule:
     
     var range = 200
     let (st12, nd22, rd32, th42, th52) = top_items(cast[ptr UncheckedArray[int64]](send), cast[ptr UncheckedArray[int64]](sent), range, MAX_ITEMS)
-    if st12.count > 0: echo "Send¹   ",  st12.perc, ":\t", (st12.time - range).ns, "~", st12.time.ns, "\t", st12.count.zeroFill, " tasks"
-    if nd22.count > 0: echo "Send¹   ",  nd22.perc, ":\t", (nd22.time - range).ns, "~", nd22.time.ns, "\t", nd22.count.zeroFill, " tasks"
-    if rd32.count > 0: echo "Send¹   ",  rd32.perc, ":\t", (rd32.time - range).ns, "~", rd32.time.ns, "\t", rd32.count.zeroFill, " tasks"
-    if th42.count > 0: echo "Send¹   ",  th42.perc, ":\t", (th42.time - range).ns, "~", th42.time.ns, "\t", th42.count.zeroFill, " tasks"
-    if th52.count > 0: echo "Send¹   ",  th52.perc, ":\t", (th52.time - range).ns, "~", th52.time.ns, "\t", th52.count.zeroFill, " tasks"
-    echo "Total sending:\t", (tasksSent - args[0][]).ns,   ((tasksSent - args[0][]) div MAX_ITEMS).ns, "/task\t", "To schedule tasks"
+    printCluster(st12, nd22, rd32, th42, th52, range, "Send¹   ")
+    printTotalSending(tasksSent - args[0][], (tasksSent - args[0][]) div MAX_ITEMS)
 
     range = 1000
     let (st11, nd21, rd31, th41, th51) = top_items(cast[ptr UncheckedArray[int64]](args), cast[ptr UncheckedArray[int64]](res), range, MAX_ITEMS)
-    if st11.count > 0: echo "Latency² ", st11.perc, ":\t", (st11.time - range).ns, "~", st11.time.ns, "\t", st11.count.zeroFill, " tasks"
-    if nd21.count > 0: echo "Latency² ", nd21.perc, ":\t", (nd21.time - range).ns, "~", nd21.time.ns, "\t", nd21.count.zeroFill, " tasks"
-    if rd31.count > 0: echo "Latency² ", rd31.perc, ":\t", (rd31.time - range).ns, "~", rd31.time.ns, "\t", rd31.count.zeroFill, " tasks"
-    if th41.count > 0: echo "Latency² ", th41.perc, ":\t", (th41.time - range).ns, "~", th41.time.ns, "\t", th41.count.zeroFill, " tasks"
-    if th51.count > 0: echo "Latency² ", th51.perc, ":\t", (th51.time - range).ns, "~", th51.time.ns, "\t", th51.count.zeroFill, " tasks"
+    printCluster(st11, nd21, rd31, th41, th51, range, "Latency² ")
 
-    echo "Join:     \t", (ta - tasksSent).ns, "\t", "         \t", "Waiting all tasks to complete"
-    echo "Snd+Join: \t", (ta - args[0][]).ns, ((ta - args[0][]) div MAX_ITEMS).ns, "/task\t", "Send + Join"
-    echo "Total:    \t", (ta - epoc).ns
+    printJoinSummary(ta - tasksSent, ta - args[0][], ta - epoc, MAX_ITEMS)
     echo "\n¹ How much time main thread locked scheduling the task\n² How long took to any thread work on task"
  
 

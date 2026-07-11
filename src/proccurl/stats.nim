@@ -1,4 +1,5 @@
 import std/tables
+import proccurl/sleez
 
 type
   Perc* = object
@@ -92,3 +93,21 @@ template zeroFill*(t: int64): string =
   if   t < 010: "00" & $t
   elif t < 100:  "0" & $t
   else:                $t
+
+
+proc printCluster*(st, nd, rd, th, fth: Pos; rng: int; label: string) =
+  if st.count > 0: echo label, st.perc, ":\t", (st.time - rng).ns, "~", st.time.ns, "\t", st.count.zeroFill, " tasks"
+  if nd.count > 0: echo label, nd.perc, ":\t", (nd.time - rng).ns, "~", nd.time.ns, "\t", nd.count.zeroFill, " tasks"
+  if rd.count > 0: echo label, rd.perc, ":\t", (rd.time - rng).ns, "~", rd.time.ns, "\t", rd.count.zeroFill, " tasks"
+  if th.count > 0: echo label, th.perc, ":\t", (th.time - rng).ns, "~", th.time.ns, "\t", th.count.zeroFill, " tasks"
+  if fth.count > 0: echo label, fth.perc, ":\t", (fth.time - rng).ns, "~", fth.time.ns, "\t", fth.count.zeroFill, " tasks"
+
+
+proc printTotalSending*(total, perTask: int64) =
+  echo "Total sending:\t", total.ns, perTask.ns, "/task\t", "To schedule tasks"
+
+
+proc printJoinSummary*(join, sndJoin, total: int64; n: int) =
+  echo "Join:     \t", join.ns, "\t", "         \t", "Waiting all tasks to complete"
+  echo "Snd+Join: \t", sndJoin.ns, (sndJoin div n).ns, "/task\t", "Send + Join"
+  echo "Total:    \t", total.ns
