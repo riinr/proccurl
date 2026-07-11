@@ -27,102 +27,8 @@
 ##   Total:     	001ms245us195ns
 ##
 
-import std/[atomics, tables, monotimes, options]
-import proccurl/[dreads_loony, ptrmath, sleez]
-
-
-type
-  Perc* = object
-    tot: int
-    part: int
-
-  Pos* = object
-    time: int64
-    count: int
-    perc: Perc
-
-  Top* = tuple
-    st1: Pos
-    nd2: Pos
-    rd3: Pos
-    th4: Pos
-    th5: Pos
-
-
-proc `$`*(p: Perc): string =
-  let i = (100 * p.part) div p.tot
-  if i < 10:
-     "0" & $i & "%"
-  else:
-    $i & "%"
-
-
-proc cluster(i: int64; d: int): int64 =
-  i div d * d
-
-
-proc top_items*(a, b: ptr int64; clstr, I: int): Top =
-  var h = initTable[int64, int]()
-
-  for i in 1..<I:
-    let k = cluster(b[i][] - a[i][], clstr)
-    discard h.hasKeyOrPut(k, 0)
-    h[k].inc
-
-  var st1: Pos
-  var nd2: Pos
-  var rd3: Pos
-  var th4: Pos
-  var th5: Pos
-
-  for k, v in h.pairs():
-    if   v > st1.count:
-      th5.time  = th4.time
-      th5.count = th4.count
-      th4.time  = rd3.time
-      th4.count = rd3.count
-      rd3.time  = nd2.time
-      rd3.count = nd2.count
-      nd2.time  = st1.time
-      nd2.count = st1.count
-      st1.time  = k + clstr
-      st1.count = v
-    elif v > nd2.count:
-      th5.time  = th4.time
-      th5.count = th4.count
-      th4.time  = rd3.time
-      th4.count = rd3.count
-      rd3.time  = nd2.time
-      rd3.count = nd2.count
-      nd2.time  = k + clstr
-      nd2.count = v
-    elif v > rd3.count:
-      th5.time  = th4.time
-      th5.count = th4.count
-      th4.time  = rd3.time
-      th4.count = rd3.count
-      rd3.time  = k + clstr
-      rd3.count = v
-    elif v > th4.count:
-      th5.time  = th4.time
-      th5.count = th4.count
-      th4.time  = k + clstr
-      th4.count = v
-    elif v > th5.count:
-      th5.time  = k + clstr
-      th5.count = v
-  st1.perc = Perc(tot: I, part: st1.count)
-  nd2.perc = Perc(tot: I, part: nd2.count)
-  rd3.perc = Perc(tot: I, part: rd3.count)
-  th4.perc = Perc(tot: I, part: th4.count)
-  th5.perc = Perc(tot: I, part: th5.count)
-  (st1, nd2, rd3, th4, th5)
-
-
-template zeroFill(t: int64): string =
-  if   t < 010: "00" & $t
-  elif t < 100:  "0" & $t
-  else:                $t
+import std/[atomics, monotimes, options]
+import proccurl/[dreads_loony, ptrmath, sleez, stats]
 
 
 when isMainModule:
@@ -173,7 +79,7 @@ when isMainModule:
     echo "Setup:    \t", (setu - epoc).ns, "\t", "         \t"
     
     var range = 50
-    let (st12, nd22, rd32, th42, th52) = top_items(send, sent, range, MAX_ITEMS)
+    let (st12, nd22, rd32, th42, th52) = top_items(cast[ptr UncheckedArray[int64]](send), cast[ptr UncheckedArray[int64]](sent), range, MAX_ITEMS)
     if st12.count > 0: echo "Send¹   ",  st12.perc, ":\t", (st12.time - range).ns, "~", st12.time.ns, "\t", st12.count.zeroFill, " tasks"
     if nd22.count > 0: echo "Send¹   ",  nd22.perc, ":\t", (nd22.time - range).ns, "~", nd22.time.ns, "\t", nd22.count.zeroFill, " tasks"
     if rd32.count > 0: echo "Send¹   ",  rd32.perc, ":\t", (rd32.time - range).ns, "~", rd32.time.ns, "\t", rd32.count.zeroFill, " tasks"
@@ -182,7 +88,7 @@ when isMainModule:
     echo "Total sending:\t", (tasksSent - send[0][]).ns,   ((tasksSent - send[0][]) div MAX_ITEMS).ns, "/task\t", "To schedule tasks"
 
     range = 50_000
-    let (st11, nd21, rd31, th41, th51) = top_items(args, res, range, MAX_ITEMS)
+    let (st11, nd21, rd31, th41, th51) = top_items(cast[ptr UncheckedArray[int64]](args), cast[ptr UncheckedArray[int64]](res), range, MAX_ITEMS)
     if st11.count > 0: echo "Latency² ", st11.perc, ":\t", (st11.time - range).ns, "~", st11.time.ns, "\t", st11.count.zeroFill, " tasks"
     if nd21.count > 0: echo "Latency² ", nd21.perc, ":\t", (nd21.time - range).ns, "~", nd21.time.ns, "\t", nd21.count.zeroFill, " tasks"
     if rd31.count > 0: echo "Latency² ", rd31.perc, ":\t", (rd31.time - range).ns, "~", rd31.time.ns, "\t", rd31.count.zeroFill, " tasks"

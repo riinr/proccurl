@@ -1,99 +1,7 @@
 import std/[asyncfutures, asyncdispatch]
-import std/[tables, monotimes, options]
-import proccurl/[ptrmath, sleez]
+import std/monotimes
+import proccurl/[ptrmath, sleez, stats]
 
-type
-  Perc* = object
-    tot: int
-    part: int
-
-  Pos* = object
-    time: int64
-    count: int
-    perc: Perc
-
-  Top* = tuple
-    st1: Pos
-    nd2: Pos
-    rd3: Pos
-    th4: Pos
-    th5: Pos
-
-
-proc `$`*(p: Perc): string =
-  let i = (100 * p.part) div p.tot
-  if i < 10:
-     "0" & $i & "%"
-  else:
-    $i & "%"
-
-
-proc cluster(i: int64; d: int): int64 =
-  i div d * d
-
-
-proc top_items*(a, b: ptr int64; clstr, I: int): Top =
-  var h = initTable[int64, int]()
-
-  for i in 1..<I:
-    let k = cluster(b[i][] - a[i][], clstr)
-    discard h.hasKeyOrPut(k, 0)
-    h[k].inc
-
-  var st1: Pos
-  var nd2: Pos
-  var rd3: Pos
-  var th4: Pos
-  var th5: Pos
-
-  for k, v in h.pairs():
-    if v > st1.count:
-      th5.time  = th4.time
-      th5.count = th4.count
-      th4.time  = rd3.time
-      th4.count = rd3.count
-      rd3.time  = nd2.time
-      rd3.count = nd2.count
-      nd2.time  = st1.time
-      nd2.count = st1.count
-      st1.time  = k
-      st1.count = v
-    elif v > nd2.count:
-      th5.time  = th4.time
-      th5.count = th4.count
-      th4.time  = rd3.time
-      th4.count = rd3.count
-      rd3.time  = nd2.time
-      rd3.count = nd2.count
-      nd2.time  = k
-      nd2.count = v
-    elif v > rd3.count:
-      th5.time  = th4.time
-      th5.count = th4.count
-      th4.time  = rd3.time
-      th4.count = rd3.count
-      rd3.time  = k
-      rd3.count = v
-    elif v > th4.count:
-      th5.time  = th4.time
-      th5.count = th4.count
-      th4.time  = k
-      th4.count = v
-    elif v > th5.count:
-      th5.time  = k
-      th5.count = v
-  st1.perc = Perc(tot: I, part: st1.count)
-  nd2.perc = Perc(tot: I, part: nd2.count)
-  rd3.perc = Perc(tot: I, part: rd3.count)
-  th4.perc = Perc(tot: I, part: th4.count)
-  th5.perc = Perc(tot: I, part: th5.count)
-  (st1, nd2, rd3, th4, th5)
-
-
-template zeroFill(t: int64): string =
-  if   t < 010: "00" & $t
-  elif t < 100:  "0" & $t
-  else:                $t
 
 when isMainModule:
   let doneFuture = newFuture[void]()
@@ -126,8 +34,8 @@ when isMainModule:
 
     let ta = getMonoTime().ticks
 
-    let (st11, nd21, rd31, th41, th51) = top_items(send, sent, 25, MAX_ITEMS)
-    let (st12, nd22, rd32, th42, th52) = top_items(sent, res,  02, MAX_ITEMS)
+    let (st11, nd21, rd31, th41, th51) = top_items(cast[ptr UncheckedArray[int64]](send), cast[ptr UncheckedArray[int64]](sent), 25, MAX_ITEMS)
+    let (st12, nd22, rd32, th42, th52) = top_items(cast[ptr UncheckedArray[int64]](sent), cast[ptr UncheckedArray[int64]](res),  02, MAX_ITEMS)
 
     echo "Tasks:    \t", MAX_ITEMS
     echo "Setup:    \t", (send[0][] - epoc).ns, "\t", "         \t", "Initializing"
