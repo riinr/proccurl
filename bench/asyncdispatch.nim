@@ -29,10 +29,7 @@ proc `$`*(p: Perc): string =
 
 
 proc cluster(i: int64; d: int): int64 =
-  if i <= d:
-    d
-  else:
-    i div d * d
+  i div d * d
 
 
 proc top_items*(a, b: ptr int64; clstr, I: int): Top =

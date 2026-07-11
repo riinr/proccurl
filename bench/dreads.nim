@@ -57,10 +57,7 @@ proc `$`*(p: Perc): string =
 
 
 proc cluster(i: int64; d: int): int64 =
-  if i <= d:
-    d
-  else:
-    i div d * d
+  i div d * d
 
 
 proc top_items*(a, b: ptr int64; clstr, I: int): Top =
@@ -183,7 +180,7 @@ when isMainModule:
     if th52.count > 0: echo "Send¹   ",  th52.perc, ":\t", (th52.time - range).ns, "~", th52.time.ns, "\t", th52.count.zeroFill, " tasks"
     echo "Total sending:\t", (tasksSent - args[0][]).ns,   ((tasksSent - args[0][]) div MAX_ITEMS).ns, "/task\t", "To schedule tasks"
 
-    range = 100_000
+    range = 1000
     let (st11, nd21, rd31, th41, th51) = top_items(args, res, range, MAX_ITEMS)
     if st11.count > 0: echo "Latency² ", st11.perc, ":\t", (st11.time - range).ns, "~", st11.time.ns, "\t", st11.count.zeroFill, " tasks"
     if nd21.count > 0: echo "Latency² ", nd21.perc, ":\t", (nd21.time - range).ns, "~", nd21.time.ns, "\t", nd21.count.zeroFill, " tasks"
