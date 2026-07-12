@@ -19,6 +19,9 @@
     mcp.nimctx.enabled = true;
     mcp.nimctx.type    = "local";
     mcp.nimctx.command = [ "nimctx" ];
+    mcp.nimlang.enabled = true;
+    mcp.nimlang.type    = "local";
+    mcp.nimlang.command = [ "nimlangserver"  "--mcp"];
     mcp.mcpcurl.enabled = true;
     mcp.mcpcurl.type    = "local";
     mcp.mcpcurl.command = [ "/home/hugosenari/Code/proccurl/mcpcurl" ];
