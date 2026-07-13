@@ -1,7 +1,7 @@
 {
-  files.gitignore.pattern."vix.json" = true;
-  files.json."/vix.json" = {
-    "$schema" = "https://vix.ai/config.json";
+  files.gitignore.pattern."/.vix/settings.json" = true;
+  files.json."/.vix/settings.json" = {
+    version = 1;
     skills.paths = [ "./.vix/skills" ];
     lsp.nim.command    = [ "nimlangserver" ];
     lsp.nim.extensions = [ ".nim" ];

@@ -1,7 +1,4 @@
 { pkgs, inputs, ...}:
-let
-  vix = import ./vix.nix;
-in
 {
   # Name your shell environment
   devshell.name = "proccurl";
@@ -31,7 +28,7 @@ in
     pkgs.context7-mcp
     pkgs.nsync
     pkgs.cosmopolitan
-  ] ++ vix.packages or [ ];
+  ];
 
   # configure direnv .envrc file
   files.direnv.enable = true;
@@ -106,8 +103,4 @@ in
     #{ name = "PKG_CONFIG_PATH"; prefix = "${pkgs.mimalloc.dev}/lib/pkgconfig";}
     { name = "COSMO_PATH";      prefix = "${pkgs.cosmocc}";}
   ];
-
-  // Merge vix configuration
-  // files.gitignore.pattern = vix.files.gitignore.pattern or { };
-  // files.json = vix.files.json or { };
 }

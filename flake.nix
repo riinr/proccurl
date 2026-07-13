@@ -9,5 +9,6 @@
     ./.nix/opencode.nix  # import opencode configuration as nix module
     ./.nix/stdio-v1_json-v1_json-rpc-v1-curl-open-rpc.nix
     ./.nix/nimctx.nix
+    ./.nix/vix.nix
   ];
 }
