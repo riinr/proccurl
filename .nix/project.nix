@@ -1,4 +1,7 @@
 { pkgs, inputs, ...}:
+let
+  vix = import ./vix.nix;
+in
 {
   # Name your shell environment
   devshell.name = "proccurl";
@@ -28,7 +31,7 @@
     pkgs.context7-mcp
     pkgs.nsync
     pkgs.cosmopolitan
-  ];
+  ] ++ vix.packages or [ ];
 
   # configure direnv .envrc file
   files.direnv.enable = true;
@@ -61,6 +64,7 @@
        --opt:speed \
        {} \;
   '';
+
   files.alias.benchr = ''
     # Run all benchmarks
     for i in $(find $PRJ_ROOT/bench -maxdepth 1 -type f -executable); do
@@ -68,32 +72,42 @@
       $i
     done
   '';
+
   files.alias.ipcs = ''
     # Compile and RUN IPC main command as Server
     rm -rf /tmp/ipc-*.mmap
     nim c -o:/tmp/proccurl-ipc-main $PRJ_ROOT/src/proccurl/ipc.nim && \
       /tmp/proccurl-ipc-main 08x32 08x32
   '';
+
   files.alias.ipcc = ''
     # RUN IPC main command as Client (server must be running)
     /tmp/proccurl-ipc-main 08x32 08x32 /tmp/ipc-*.mmap
   '';
+
   files.alias.build = ''
     # BUILD all binaries
     nim c --threads:on -o:bin/proccurl src/proccurl.nim
     nim c --threads:on -o:bin/mcpcurl src/mcpcurl.nim
   '';
+
   files.alias.build-mcpcurl = ''
     # BUILD mcpcurl only
     nim c --threads:on -o:bin/mcpcurl src/mcpcurl.nim
   '';
+
   files.alias.build-proccurl = ''
     # BUILD proccurl only
     nim c --threads:on -o:bin/proccurl src/proccurl.nim
   '';
+
   env = [
     { name = "LD_LIBRARY_PATH"; prefix = "${pkgs.curlFull.out}/lib:${pkgs.cosmopolitan}/lib";}
     #{ name = "PKG_CONFIG_PATH"; prefix = "${pkgs.mimalloc.dev}/lib/pkgconfig";}
     { name = "COSMO_PATH";      prefix = "${pkgs.cosmocc}";}
   ];
+
+  // Merge vix configuration
+  // files.gitignore.pattern = vix.files.gitignore.pattern or { };
+  // files.json = vix.files.json or { };
 }
