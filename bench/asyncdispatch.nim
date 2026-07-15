@@ -7,9 +7,9 @@ when isMainModule:
   let doneFuture = newFuture[void]()
   doneFuture.complete
 
-  proc helloWorld(args, res: pointer): Future[void] {.async.} =
+  proc helloWorld(args: pointer): Future[int64] {.async.} =
     await doneFuture # makes sure we release to mainloop
-    cast[ptr int64](res)[] = getMonoTime().ticks
+    getMonoTime().ticks
 
   const MAX_ITEMS = 1000
 
@@ -19,6 +19,7 @@ when isMainModule:
     let sent  = createShared(int64,  MAX_ITEMS)
     let args  = createShared(int64,  MAX_ITEMS)
     let res   = createShared(int64,  MAX_ITEMS)
+    var futs  = newSeq[Future[int64]](MAX_ITEMS)
 
     let epoc = getMonoTime().ticks
 
@@ -27,10 +28,12 @@ when isMainModule:
 
       send[i] = getMonoTime().ticks
       args[i] = getMonoTime().ticks
-      await helloWorld(args[i], res[i])
+      futs[i] = helloWorld(cast[pointer](args[i]))
       sent[i] = getMonoTime().ticks
 
     let tasksSent = getMonoTime().ticks
+
+    discard await all(futs)
 
     let ta = getMonoTime().ticks
 
