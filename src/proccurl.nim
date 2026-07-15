@@ -27,7 +27,7 @@ const STDIO_JSONL_JSONRPC_OK       = """
   }
 }
 """
-const UNKNOWN_COMMAND_OR_PROTOCOL  = """
+const UNKNOWN_COMMAND_OR_PROTOCOL*  = """
 Unknown command or protocol!!
 List of protocols: `proccurl protocols`
 Protocol details:  `proccurl protocols --protocol {protocol}`
@@ -87,8 +87,16 @@ proc getMethod*(msg: JsonNode): string =
   else:
     msg["method"].getStr
 
-proc getUrl (msg: JsonNode): string = msg["params"]["url" ].getStr
-proc getBody(msg: JsonNode): string = msg["params"]["body"].getStr
+proc getUrl* (msg: JsonNode): string =
+  if msg.contains("params") and msg["params"].contains("url"):
+    msg["params"]["url"].getStr
+  else:
+    ""
+proc getBody*(msg: JsonNode): string =
+  if msg.contains("params") and msg["params"].contains("body"):
+    msg["params"]["body"].getStr
+  else:
+    ""
 
 proc handleMethod*(batch: var RequestBatch; msg: JsonNode): JsonNode =
   result = newJNull()
@@ -164,7 +172,7 @@ iterator getLine*(sin: Stream): string =
       break
 
 
-proc connect(sin, sout: Stream): void =
+proc connect*(sin, sout: Stream): void =
   let curl = newCurly()
   var i    = 0
   for line in sin.getLine:

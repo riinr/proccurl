@@ -1,4 +1,4 @@
-import std/[unittest, json, strutils, streams]
+import std/[unittest, json, strutils, streams, sequtils]
 import proccurl
 import curly
 
@@ -419,6 +419,25 @@ suite "CliActionKind":
 # getMethod — pure function tests
 # ---------------------------------------------------------------------------
 
+suite "getUrl/getBody":
+
+  test "getUrl returns url from params":
+    let msg = %*{"params": {"url": "http://example.com"}}
+    check getUrl(msg) == "http://example.com"
+
+  test "getUrl returns empty string when no params":
+    let msg = %*{"method": "/curl/v0/get"}
+    check getUrl(msg) == ""
+
+  test "getBody returns body from params":
+    let msg = %*{"params": {"url": "http://example.com", "body": "payload"}}
+    check getBody(msg) == "payload"
+
+  test "getBody returns empty string when no body":
+    let msg = %*{"params": {"url": "http://example.com"}}
+    check getBody(msg) == ""
+
+
 suite "getMethod":
 
   test "nil input returns empty string":
@@ -450,5 +469,73 @@ suite "getMethod":
 
   test "curl/v0/batch method returns curl/v0/batch":
     check getMethod(%*{"method": "/curl/v0/batch"}) == "/curl/v0/batch"
+
+
+
+# ---------------------------------------------------------------------------
+# connect — stdio loop integration (no-network messages only)
+# ---------------------------------------------------------------------------
+
+suite "connect":
+
+  test "loop echoes _API/v1 response and validation error as JSONL":
+    let input  = newStringStream(
+      """{"jsonrpc": "2.0", "id": 1, "method": "/_API/v1"}
+{"jsonrpc": "2.0", "id": 2, "method": "/curl/v0/get"}
+""")
+    let output = newStringStream()
+    connect(input, output)
+    let lines = output.data.splitLines.filterIt(it.len > 0)
+    check lines.len == 2
+    let first  = parseJson lines[0]
+    let second = parseJson lines[1]
+    check first["id"].getInt == 1
+    check first["result"]["openrpc"].getStr == "1.2.1"
+    check second["id"].getInt == 2
+    check second["error"]["code"].getInt == -32601
+    check second["error"]["message"].getStr == "Invalid method parameters, no params found"
+
+  test "empty input yields no output":
+    let input  = newStringStream("")
+    let output = newStringStream()
+    connect(input, output)
+    check output.data.len == 0
+
+  test "malformed JSON line is skipped without crashing":
+    let input  = newStringStream("not-json\n")
+    let output = newStringStream()
+    connect(input, output)
+    check output.data.len == 0
+
+
+# ---------------------------------------------------------------------------
+# main — CLI dispatch
+# ---------------------------------------------------------------------------
+
+suite "main":
+
+  test "protocols action writes the protocol id to stdout":
+    let sin   = newStringStream("")
+    let sout  = newStringStream()
+    let serr  = newStringStream()
+    main(@["protocols"], sin, sout, serr)
+    check sout.data.strip == STDIO_JSONL_JSONRPC
+
+  test "protocols --protocol action writes the help doc":
+    let sin   = newStringStream("")
+    let sout  = newStringStream()
+    let serr  = newStringStream()
+    main(@["protocols", "--protocol", STDIO_JSONL_JSONRPC], sin, sout, serr)
+    check STDIO_JSONL_JSONRPC in sout.data
+
+  test "unknown action help constant lists protocols and connect usage":
+    # main writes UNKNOWN_COMMAND_OR_PROTOCOL to stderr then quit(1) on an
+    # unknown action; assert the constant it emits contains the guidance.
+    check "proccurl protocols" in UNKNOWN_COMMAND_OR_PROTOCOL
+    check "proccurl connect" in UNKNOWN_COMMAND_OR_PROTOCOL
+    check "proccurl protocols --protocol" in UNKNOWN_COMMAND_OR_PROTOCOL
+
+
+
 
 
