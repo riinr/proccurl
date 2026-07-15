@@ -48,7 +48,7 @@ It should be similar to [MCP](https://modelcontextprotocol.io/docs/getting-start
 4. Your app starts proccurl with `proccurl connect --protocol {protocol}`.
     1. the comunication between your app and proccurl is defined by the protocol.
 5. There are currently only one protocol implemented:
-    1. [stdio-v1+jsonl-v1+json-rpc-v2+open-rpc-v1](./PROTOCOLS/STDIO-v1_JSONL-v1_JSON-RPC-v2_OPEN-RPC-v1.md)
+    1. [stdio-v1+jsonl-v1+json-rpc-v2](./PROTOCOLS/STDIO-v1_JSONL-v1_JSON-RPC-v2_OPEN-RPC-v1.md)
 
 __Example:__
 
