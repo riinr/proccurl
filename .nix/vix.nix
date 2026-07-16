@@ -5,6 +5,60 @@ in
 {
   files.gitignore.pattern."/.vix/" = true;
   files.alias.vix = "nix run github:numtide/llm-agents.nix#vix -- $@";
+  files.json."/.vix/settings.json" = {
+    version = 1;
+    allowed_directories= [ "." "~/.nimble" "/nix/store" ];
+    deny_list.paths    = [ ".envrc.private" ];
+    skills.paths       = [ "./.vix/skills" ".opencode/nim-skills" ];
+    languages = [
+      { 
+        name        = "nim";
+	extensions  = [".nim" ".nimble"];
+	lsp.command = "nimlangserver";
+      }
+    ];
+    mcp_servers = [
+      {
+        name    = "context7";
+        command = "context7-mcp";
+        env     = {
+          CONTEXT7_API_KEY = "{env:CONTEXT7_API_KEY}";
+        };
+      }
+      {
+        name    = "hydradb";                            
+        command = "npx";                                
+        args    = [ "-y" "@hydradb/mcp@latest" ];
+        env     = {                                     
+          HYDRA_DB_API_KEY = "{env:HYDRA_DB_API_KEY}";
+          HYDRA_DB_TENANT_ID = "hugosenari";
+        };
+      }
+      {
+        name    = "mcpcurl";
+        command = "/home/hugosenari/Code/proccurl/mcpcurl";
+      }
+      {
+        name    = "webdrivemcp";
+        command = "/home/hugosenari/Code/proccurl/bin/webdrivemcp";
+      }
+      {
+        name    = "nimctx";
+        command = "nimctx";
+      }
+      {
+        name    = "nimlang";
+        command = "nimlangserver";
+        args    = [ "--mcp" ];
+      }
+      {
+        name    = "codegraph";
+        command = "nix";
+        args    = ["run" "github:numtide/ll-agents.nix#codegraph" "--" "serve" "--mcp"];
+      }
+    ];
+    workflows = [];
+  };
   files.json."/.vix/providers.json" = {
     schema_version = 1;
     providers = [
@@ -80,46 +134,6 @@ in
     auth_logins = [ ];
   };
 
-  files.json."/.vix/settings.json" = {
-    version = 1;
-    allowed_directories= [ "." "~/.nimble" "/nix/store" ];
-    deny.list          = [ ".envrc.private" ];
-    skills.paths       = [ "./.vix/skills" ".opencode/nim-skills" ];
-    lsp.nim.command    = [ "nimlangserver" ];
-    lsp.nim.extensions = [ ".nim"          ];                   
-    mcp_servers = [
-      {
-        name    = "context7";
-        command = "context7-mcp";
-        env     = {
-          CONTEXT7_API_KEY = "{env:CONTEXT7_API_KEY}";
-        };
-      }
-      {
-        name    = "hydradb";                            
-        command = "npx";                                
-        args    = [ "-y" "@hydradb/mcp@latest" ];
-        env     = {                                     
-          HYDRA_DB_API_KEY = "{env:HYDRA_DB_API_KEY}";
-          HYDRA_DB_TENANT_ID = "hugosenari";
-        };
-      }
-      {
-        name    = "mcpcurl";
-        command = "/home/hugosenari/Code/proccurl/mcpcurl";
-      }
-      {
-        name    = "nimctx";
-        command = "nimctx";
-      }
-      {
-        name    = "nimlang";
-        command = "nimlangserver";
-        args    = [ "--mcp" ];
-      }
-    ];
-    workflows = [];
-  };
 
   files.text."/.vix/skills/vix-help/SKILL.MD" = ''
   ---

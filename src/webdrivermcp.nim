@@ -1,0 +1,278 @@
+## webdrivermcp -- Model Context Protocol server exposing the `halonium`
+## library (github.com/halonium/halonium) as tools.
+##
+## Each public method of the halonium WebDriver API is exposed as an MCP tool:
+##   - wd_new_web_driver  : create a WebDriver pointing at a remote URL
+##   - wd_create_session  : start a browsing session
+##   - wd_close_session   : close a browsing session
+##   - wd_navigate        : navigate the session to a URL
+##   - wd_get_page_source : fetch the current page source
+##   - wd_find_element    : locate an element by selector + strategy
+##   - wd_get_text        : read an element's visible text
+##
+## Sessions are tracked per `sessionId` so a single server process can serve
+## multiple tool/call requests that share state (navigate then find then read).
+##
+## The transport is line-delimited JSON-RPC over stdio, exactly like
+## `mcpcurl.nim`. Run it with `./bin/webdrivermcp`.
+
+import std/[json, streams, strutils, tables, os, options]
+import halonium
+
+const MCP_PROTOCOL_VERSION* = "2025-06-18"
+
+type Tool = object
+  name: string
+  description: string
+  inputSchema: JsonNode
+
+# State shared across tool calls in a single server process.
+var gWebDriver: WebDriver
+var gSessions: Table[string, Session]
+var gElements: Table[string, Element]
+
+proc toolSchema(properties: openArray[(string, string, string)];
+                required: openArray[string]): JsonNode =
+  result = %*{"type": "object", "properties": {}, "required": []}
+  for (name, typ, desc) in properties:
+    result["properties"][name] = %*{"type": typ, "description": desc}
+  for name in required:
+    result["required"].add %name
+
+proc defineTools(): seq[Tool] =
+  result = @[
+    Tool(
+      name: "wd_new_web_driver",
+      description: "Create a WebDriver client pointing at a remote driver URL",
+      inputSchema: toolSchema(
+        [("url", "string", "Remote WebDriver URL (default: http://localhost:4444)"),
+         ("browser", "string", "Browser kind: firefox, chrome, edge (default: firefox)")],
+        [])),
+    Tool(
+      name: "wd_create_session",
+      description: "Create a new browsing session on the WebDriver",
+      inputSchema: toolSchema([], [])),
+    Tool(
+      name: "wd_close_session",
+      description: "Close a browsing session by its id",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id returned by wd_create_session")],
+        ["session_id"])),
+    Tool(
+      name: "wd_navigate",
+      description: "Navigate a session to a URL",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("url", "string", "URL to navigate to")],
+        ["session_id", "url"])),
+    Tool(
+      name: "wd_get_page_source",
+      description: "Get the current page source of a session",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
+    Tool(
+      name: "wd_find_element",
+      description: "Find an element in a session using a location strategy",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("selector", "string", "Selector value (e.g. CSS or XPath)"),
+         ("strategy", "string", "Location strategy: css, xpath, link_text, partial_link_text, name, tag_name, class_name (default: css)")],
+        ["session_id", "selector"])),
+    Tool(
+      name: "wd_get_text",
+      description: "Get the visible text of a previously found element",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("element_id", "string", "Element id returned by wd_find_element")],
+        ["session_id", "element_id"])),
+  ]
+
+proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
+  result = %*{
+    "jsonrpc": "2.0",
+    "id": id,
+    "error": {"code": code, "message": message}
+  }
+
+proc jsonRpcResult(id: JsonNode; resultNode: JsonNode): JsonNode =
+  result = %*{
+    "jsonrpc": "2.0",
+    "id": id,
+    "result": resultNode
+  }
+
+proc contentResult(id: JsonNode; text: string): JsonNode =
+  jsonRpcResult(id, %*{
+    "content": [{"type": "text", "text": text}],
+    "structuredContent": {"text": text},
+    "isError": false
+  })
+
+proc handleInitialize(id: JsonNode; params: JsonNode): JsonNode =
+  jsonRpcResult(id, %*{
+    "protocolVersion": MCP_PROTOCOL_VERSION,
+    "capabilities": {"tools": {}},
+    "serverInfo": {"name": "webdrivermcp", "version": "0.1.0"}
+  })
+
+proc handlePing(id: JsonNode): JsonNode =
+  jsonRpcResult(id, %*{})
+
+proc handleToolsList(id: JsonNode): JsonNode =
+  let tools = defineTools()
+  var toolList = newJArray()
+  for t in tools:
+    toolList.add(%*{
+      "name": t.name,
+      "description": t.description,
+      "inputSchema": t.inputSchema
+    })
+  jsonRpcResult(id, %*{"tools": toolList})
+
+proc getSession(id: JsonNode; args: JsonNode): Session =
+  let sid = args{"session_id"}.getStr("")
+  if sid == "":
+    raise newException(WebDriverException, "Missing required argument: session_id")
+  if not gSessions.hasKey(sid):
+    raise newException(WebDriverException, "Unknown session_id: " & sid)
+  result = gSessions[sid]
+
+proc getBrowserKind(s: string): BrowserKind =
+  case s.normalize
+  of "firefox", "ff": Firefox
+  of "chrome", "chromium": Chrome
+  of "edge": Edge
+  else: Firefox
+
+proc getStrategy(s: string): LocationStrategy =
+  case s.normalize
+  of "css", "css selector": CssSelector
+  of "xpath": XPathSelector
+  of "link_text", "link text": LinkTextSelector
+  of "partial_link_text", "partial link text": PartialLinkTextSelector
+  of "name": NameSelector
+  of "tag_name", "tag name": TagNameSelector
+  of "class_name", "class name": ClassNameSelector
+  else: CssSelector
+
+proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
+  let toolName = params{"name"}.getStr("")
+  let args = params{"arguments"}
+  if args == nil or args.kind != JObject:
+    return jsonRpcError(id, -32602, "Invalid arguments")
+
+  try:
+    case toolName
+    of "wd_new_web_driver":
+      let url = args{"url"}.getStr("http://localhost:4444")
+      let browser = getBrowserKind(args{"browser"}.getStr("firefox"))
+      gWebDriver = newRemoteWebDriver(browser, url)
+      result = contentResult(id, "webdriver created for " & url & " (" & $browser & ")")
+
+    of "wd_create_session":
+      if gWebDriver == nil:
+        gWebDriver = newRemoteWebDriver(Firefox)
+      let session = gWebDriver.createRemoteSession()
+      gSessions[session.id] = session
+      result = contentResult(id, session.id)
+
+    of "wd_close_session":
+      let session = getSession(id, args)
+      session.close()
+      gSessions.del(session.id)
+      result = contentResult(id, "session closed: " & session.id)
+
+    of "wd_navigate":
+      let session = getSession(id, args)
+      let url = args{"url"}.getStr("")
+      if url == "":
+        return jsonRpcError(id, -32602, "Missing required argument: url")
+      session.navigate(url)
+      result = contentResult(id, "navigated to " & url)
+
+    of "wd_get_page_source":
+      let session = getSession(id, args)
+      let src = session.pageSource()
+      result = contentResult(id, src)
+
+    of "wd_find_element":
+      let session = getSession(id, args)
+      let selector = args{"selector"}.getStr("")
+      if selector == "":
+        return jsonRpcError(id, -32602, "Missing required argument: selector")
+      let strategy = getStrategy(args{"strategy"}.getStr("css"))
+      let elOpt = session.findElement(selector, strategy)
+      if elOpt.isNone:
+        return jsonRpcError(id, -32602, "No element found for: " & selector)
+      let el = elOpt.get
+      gElements[el.id] = el
+      result = contentResult(id, el.id)
+
+    of "wd_get_text":
+      let session = getSession(id, args)
+      let eid = args{"element_id"}.getStr("")
+      if eid == "":
+        return jsonRpcError(id, -32602, "Missing required argument: element_id")
+      if not gElements.hasKey(eid):
+        return jsonRpcError(id, -32602, "Unknown element_id: " & eid)
+      let text = gElements[eid].visibleText()
+      result = contentResult(id, text)
+
+    else:
+      result = jsonRpcResult(id, %*{
+        "content": [{"type": "text", "text": "Unknown tool: " & toolName}],
+        "isError": true
+      })
+  except WebDriverException as e:
+    result = jsonRpcResult(id, %*{
+      "content": [{"type": "text", "text": e.msg}],
+      "isError": true
+    })
+  except CatchableError as e:
+    result = jsonRpcError(id, -32000, e.msg)
+
+proc handleRequest(msg: JsonNode): JsonNode =
+  let mcpMethod = msg{"method"}.getStr("")
+  let id = msg{"id"}
+
+  case mcpMethod
+  of "initialize": handleInitialize(id, msg{"params"})
+  of "ping":       handlePing(id)
+  of "tools/list": handleToolsList(id)
+  of "tools/call": handleToolsCall(id, msg{"params"})
+  else: jsonRpcError(id, -32601, "Method not found: " & mcpMethod)
+
+iterator lines(sin: Stream): string =
+  while true:
+    try:
+      let line = sin.readLine.strip
+      if line.len > 0:
+        yield line
+    except:
+      break
+
+proc connect(sin, sout: Stream): void =
+  for line in sin.lines:
+    let msg = try: parseJson(line) except: newJNull()
+    if msg.kind != JObject:
+      continue
+
+    let mcpMethod = msg{"method"}.getStr("")
+
+    if mcpMethod in ["notifications/initialized", "notifications/cancelled"]:
+      continue
+
+    if msg.contains("id"):
+      let resp = handleRequest(msg)
+      write sout, $resp & "\n"
+      sout.flush
+
+proc main*(params: seq[string]; sin, sout, serr: Stream): void =
+  connect(sin, sout)
+
+when isMainModule:
+  var params = newSeq[string]()
+  for i in 1..paramCount():
+    params.add i.paramStr
+  params.main stdin.newFileStream, stdout.newFileStream, stderr.newFileStream

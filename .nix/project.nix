@@ -29,6 +29,7 @@
     pkgs.nsync
     pkgs.cosmopolitan
     pkgs.perf
+    pkgs.geckodriver
   ];
 
   # configure direnv .envrc file
