@@ -11,7 +11,8 @@
   files.gitignore.template."Global/Backup"   = true;
   files.gitignore.template."Global/Diff"     = true;
   files.gitignore.pattern."*\n!/**/\n!*.*"   = true;
-  files.gitignore.pattern.".*" = true;
+  files.gitignore.pattern.".*"               = true;
+  files.gitignore.pattern."!.nix/*"          = true;
 
   # install a packages
   packages = [
@@ -30,6 +31,7 @@
     pkgs.cosmopolitan
     pkgs.perf
     pkgs.geckodriver
+    pkgs.pandoc
   ];
 
   # configure direnv .envrc file

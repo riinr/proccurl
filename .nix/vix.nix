@@ -9,7 +9,7 @@ in
     version = 1;
     allowed_directories= [ "." "~/.nimble" "/nix/store" ];
     deny_list.paths    = [ ".envrc.private" ];
-    skills.paths       = [ "./.vix/skills" ".opencode/nim-skills" ];
+    skills.paths       = [ ".vix/skills/*/SKILL.md" ".opencode/nim-skills/*/SKILL.md" ];
     languages = [
       { 
         name        = "nim";
@@ -53,8 +53,8 @@ in
       }
       {
         name    = "codegraph";
-        command = "nix";
-        args    = ["run" "github:numtide/ll-agents.nix#codegraph" "--" "serve" "--mcp"];
+        command = "codegraph";
+        args    = ["serve" "--mcp"];
       }
     ];
     workflows = [];
