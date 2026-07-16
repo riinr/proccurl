@@ -1,4 +1,4 @@
-import std/[json, streams, strutils, options, os]
+import std/[json, streams, strutils, os]
 import libcurl except Option
 
 const MCP_PROTOCOL_VERSION* = "2025-06-18"
