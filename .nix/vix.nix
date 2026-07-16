@@ -3,17 +3,17 @@ let
    { spec = "opencode/${name}"; display_name = name; context_window = context;  };
 in
 {
+  files.gitignore.pattern."/.vix/" = true;
   files.alias.vix = "nix run github:numtide/llm-agents.nix#vix -- $@";
-  files.gitignore.pattern."/.vix/providers.json" = true;
   files.json."/.vix/providers.json" = {
     schema_version = 1;
     providers = [
       {
-        id = "opencode";
+        id           = "opencode";
         display_name = "OpenCode";
         model_prefix = "opencode";
-        wire_format = "chat_completions";
-        inference.base_url = "https://opencode.ai/zen/v1";
+        wire_format  = "chat_completions";
+        inference.base_url    = "https://opencode.ai/zen/v1";
         inference.auth_scheme = "bearer";
         credential_methods = [
           { kind = "api_key"; env_var = "OPENCODE_API_KEY"; keyring = "opencode-api-key"; }
@@ -80,45 +80,55 @@ in
     auth_logins = [ ];
   };
 
-  files.gitignore.pattern."/.vix/settings.json" = true;
   files.json."/.vix/settings.json" = {
     version = 1;
-    skills.paths = [ "./.vix/skills" ];
+    allowed_directories= [ "." "~/.nimble" "/nix/store" ];
+    deny.list          = [ ".envrc.private" ];
+    skills.paths       = [ "./.vix/skills" ".opencode/nim-skills" ];
     lsp.nim.command    = [ "nimlangserver" ];
-    lsp.nim.extensions = [ ".nim" ];
+    lsp.nim.extensions = [ ".nim"          ];                   
     mcp_servers = [
       {
-        name = "context7";
+        name    = "context7";
         command = "context7-mcp";
-        args = [ ];
-        env= {
+        env     = {
           CONTEXT7_API_KEY = "{env:CONTEXT7_API_KEY}";
         };
       }
       {
-        name = "hydradb";
-        command = "npx";
-        args = [ "-y" "@hydradb/mcp@latest" ];
-        env= {
+        name    = "hydradb";                            
+        command = "npx";                                
+        args    = [ "-y" "@hydradb/mcp@latest" ];
+        env     = {                                     
           HYDRA_DB_API_KEY = "{env:HYDRA_DB_API_KEY}";
           HYDRA_DB_TENANT_ID = "hugosenari";
         };
       }
       {
-        name = "mcpcurl";
+        name    = "mcpcurl";
         command = "/home/hugosenari/Code/proccurl/mcpcurl";
-        args = [ ];
       }
       {
-        name = "nimctx";
+        name    = "nimctx";
         command = "nimctx";
-        args = [ ];
       }
       {
-        name = "nimlang";
+        name    = "nimlang";
         command = "nimlangserver";
-        args = [ "--mcp" ];
+        args    = [ "--mcp" ];
       }
     ];
+    workflows = [];
   };
+
+  files.text."/.vix/skills/vix-help/SKILL.MD" = ''
+  ---
+  name: vix-help
+  description: Answer questions about vix interface, keyboard shortcuts, configuration, agents, providers, jobs, etc  
+  ---
+
+  Grep inside in ./.vix/docs/*.md for $ARGUMENTS
+  If any file match try to load it to respond user question
+  If no file match read all files in ./.vix/docs/*.md and use them to repond user question
+  '';
 }

@@ -5,8 +5,8 @@ author        = "hugosenari"
 description   = "Curl IPC"
 license       = "MIT"
 srcDir        = "src"
-bin           = @["proccurl", "mcpcurl"]
-
+binDir        = "bin"
+bin           = @["proccurl", "mcpcurl", "pepino"]
 
 # Dependencies
 

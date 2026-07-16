@@ -28,6 +28,7 @@
     pkgs.context7-mcp
     pkgs.nsync
     pkgs.cosmopolitan
+    pkgs.perf
   ];
 
   # configure direnv .envrc file
