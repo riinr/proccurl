@@ -14,6 +14,7 @@
 ##   GET  /session/<id>/alert/text          -> {"value": "<alert text>"}
 ##   GET  /session/<id>/alert_text          -> {"value": "<alert text>"}
 ##   GET  /session/<id>/element/<eid>/text -> {"value": "<text>"}
+##   GET  /session/<id>/cookie             -> {"value": [{"name":"...","value":"..."}]}
 
 import std/[net, os, strutils, typedthreads]
 
@@ -41,6 +42,8 @@ proc handle(meth, path: string): string =
       """{"value":"""" & MOCK_ELEMENT_TEXT & """"}"""
     elif path.endsWith("/alert/accept") or path.endsWith("/accept_alert"):
       """{"value":null}"""
+    elif path.endsWith("/cookie"):
+      """{"value":[{"name":"test","value":"test_value","path":"/","domain":"example.com","secure":false,"httpOnly":true}]}"""
     else:
       """{"value":null}"""
   "HTTP/1.1 200 OK\r\nContent-Length: " & $body.len &

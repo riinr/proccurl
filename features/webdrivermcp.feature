@@ -15,6 +15,7 @@ Feature: WebDriver MCP
     And the tools include wd_get_text
     And the tools include wd_accept_alert
     And the tools include wd_alert_text
+    And the tools include wd_all_cookies
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -48,3 +49,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_alert_text
     Then the alert text is retrieved
+
+  Scenario: Get all cookies
+    Given an open webdriver session on "https://example.com"
+    When I call wd_all_cookies
+    Then the cookies include "test=test_value"

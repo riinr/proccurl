@@ -16,7 +16,7 @@
 ## The transport is line-delimited JSON-RPC over stdio, exactly like
 ## `mcpcurl.nim`. Run it with `./bin/webdrivermcp`.
 
-import std/[json, streams, strutils, tables, os, options]
+import std/[json, streams, strutils, tables, os, options, sequtils]
 import halonium
 
 const MCP_PROTOCOL_VERSION* = "2025-06-18"
@@ -95,6 +95,12 @@ proc defineTools(): seq[Tool] =
     Tool(
       name: "wd_alert_text",
       description: "Get the text of a JavaScript alert dialog in the current session",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
+    Tool(
+      name: "wd_all_cookies",
+      description: "Get all cookies for the current session",
       inputSchema: toolSchema(
         [("session_id", "string", "Session id")],
         ["session_id"])),
@@ -240,6 +246,12 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       let text = session.alertText()
       result = contentResult(id, text)
+
+    of "wd_all_cookies":
+      let session = getSession(id, args)
+      let cookies = session.allCookies()
+      let lines = cookies.mapIt(it.name & "=" & it.value)
+      result = contentResult(id, lines.join("\n"))
 
     else:
       result = jsonRpcResult(id, %*{
