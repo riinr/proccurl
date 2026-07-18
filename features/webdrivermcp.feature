@@ -14,6 +14,7 @@ Feature: WebDriver MCP
     And the tools include wd_find_element
     And the tools include wd_get_text
     And the tools include wd_accept_alert
+    And the tools include wd_dismiss_alert
     And the tools include wd_alert_text
     And the tools include wd_all_cookies
     And the tools include wd_delete_all_cookies
@@ -53,6 +54,11 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_alert_text
     Then the alert text is retrieved
+
+  Scenario: Dismiss a JavaScript alert
+    Given an open webdriver session on "https://example.com"
+    When I call wd_dismiss_alert
+    Then the alert is dismissed
 
   Scenario: Get all cookies
     Given an open webdriver session on "https://example.com"

@@ -93,6 +93,12 @@ proc defineTools(): seq[Tool] =
         [("session_id", "string", "Session id")],
         ["session_id"])),
     Tool(
+      name: "wd_dismiss_alert",
+      description: "Dismiss a JavaScript alert dialog in the current session",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
+    Tool(
       name: "wd_alert_text",
       description: "Get the text of a JavaScript alert dialog in the current session",
       inputSchema: toolSchema(
@@ -266,6 +272,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       session.acceptAlert()
       result = contentResult(id, "alert accepted")
+
+    of "wd_dismiss_alert":
+      let session = getSession(id, args)
+      session.dismissAlert()
+      result = contentResult(id, "alert dismissed")
 
     of "wd_alert_text":
       let session = getSession(id, args)
