@@ -178,6 +178,12 @@ proc defineTools(): seq[Tool] =
       inputSchema: toolSchema(
         [("session_id", "string", "Session id")],
         ["session_id"])),
+    Tool(
+      name: "wd_y",
+      description: "Get the current window y-coordinate in pixels",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -392,6 +398,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       let w = session.currentWindow().rect().width
       result = contentResult(id, $w)
+
+    of "wd_y":
+      let session = getSession(id, args)
+      let y = session.currentWindow().rect().y
+      result = contentResult(id, $y)
 
     else:
       result = jsonRpcResult(id, %*{
