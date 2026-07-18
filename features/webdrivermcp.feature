@@ -35,6 +35,7 @@ Feature: WebDriver MCP
     And the tools include wd_attribute
     And the tools include wd_clear
     And the tools include wd_click
+    And the tools include wd_double_click
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -173,3 +174,13 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_click with css_selector "button" and button "mbRight"
     Then the element is clicked
+
+  Scenario: Double-click on an element
+    Given an open webdriver session on "https://example.com"
+    When I call wd_double_click with css_selector "button"
+    Then the element is double-clicked
+
+  Scenario: Right double-click on an element
+    Given an open webdriver session on "https://example.com"
+    When I call wd_double_click with css_selector "button" and button "mbRight"
+    Then the element is double-clicked
