@@ -30,6 +30,7 @@ Feature: WebDriver MCP
     And the tools include wd_width
     And the tools include wd_y
     And the tools include wd_rect
+    And the tools include wd_visible_text
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -138,3 +139,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_rect
     Then the window rect includes "x=0.0, y=0.0, width=1024.0, height=768.0"
+
+  Scenario: Get visible text of an element
+    Given an open webdriver session on "https://example.com"
+    When I call wd_visible_text with css_selector "h1"
+    Then the visible text is "Example Domain"
