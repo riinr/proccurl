@@ -119,6 +119,7 @@ suite "webdrivermcp scenarios":
     check "wd_accept_alert" in names
     check "wd_alert_text" in names
     check "wd_all_cookies" in names
+    check "wd_delete_all_cookies" in names
     check "wd_back" in names
     check "wd_current_url" in names
 
@@ -194,6 +195,15 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_all_cookies", %*{"session_id": sid})
     check getText(r, "text").contains("test=test_value")
+
+  test "Delete all cookies":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_delete_all_cookies", %*{"session_id": sid})
+    check getText(r, "text").contains("all cookies deleted")
 
   test "Navigate back":
     let srv = startServer()
