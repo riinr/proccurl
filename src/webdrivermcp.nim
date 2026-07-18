@@ -243,6 +243,14 @@ proc defineTools(): seq[Tool] =
          ("delta_x", "number", "Horizontal offset in pixels"),
          ("delta_y", "number", "Vertical offset in pixels")],
         ["session_id", "css_selector", "delta_x", "delta_y"])),
+    Tool(
+      name: "wd_send_keys",
+      description: "Send keystrokes to the first element matching the CSS selector",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element"),
+         ("text", "string", "Text to type into the element")],
+        ["session_id", "css_selector", "text"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -541,6 +549,17 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       if opt.isSome:
         discard session.actionChain().dragAndDrop(opt.get, dx, dy).perform()
         result = contentResult(id, "element dragged")
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_send_keys":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let text = args["text"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        opt.get.sendKeys(text)
+        result = contentResult(id, "keys sent")
       else:
         result = contentResult(id, "element not found")
 

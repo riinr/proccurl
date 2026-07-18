@@ -37,6 +37,7 @@ Feature: WebDriver MCP
     And the tools include wd_click
     And the tools include wd_double_click
     And the tools include wd_drag_and_drop
+    And the tools include wd_send_keys
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -190,3 +191,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_drag_and_drop with css_selector "div" and delta_x 100 and delta_y 50
     Then the element is dragged
+
+  Scenario: Send keys to an element
+    Given an open webdriver session on "https://example.com"
+    When I call wd_send_keys with css_selector "input" and text "hello world"
+    Then the keys are sent
