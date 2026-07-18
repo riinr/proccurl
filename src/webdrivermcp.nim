@@ -143,6 +143,12 @@ proc defineTools(): seq[Tool] =
         [("session_id", "string", "Session id")],
         ["session_id"])),
     Tool(
+      name: "wd_refresh",
+      description: "Refresh the current page",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
+    Tool(
       name: "wd_current_url",
       description: "Get the current URL of the session",
       inputSchema: toolSchema(
@@ -332,6 +338,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       session.back()
       result = contentResult(id, "navigated back")
+
+    of "wd_refresh":
+      let session = getSession(id, args)
+      session.refresh()
+      result = contentResult(id, "page refreshed")
 
     of "wd_current_url":
       let session = getSession(id, args)

@@ -22,6 +22,7 @@ Feature: WebDriver MCP
     And the tools include wd_delete_cookie
     And the tools include wd_forward
     And the tools include wd_back
+    And the tools include wd_refresh
     And the tools include wd_current_url
 
   Scenario: Create a webdriver and a session
@@ -91,6 +92,11 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_back
     Then the browser navigates back
+
+  Scenario: Refresh the page
+    Given an open webdriver session on "https://example.com"
+    When I call wd_refresh
+    Then the page is refreshed
 
   Scenario: Get current URL
     Given an open webdriver session on "https://example.com"
