@@ -18,8 +18,9 @@
 ##   POST /session/<id>/accept_alert    -> {"value":null}
 ##   GET  /session/<id>/alert/text          -> {"value": "<alert text>"}
 ##   GET  /session/<id>/alert_text          -> {"value": "<alert text>"}
-##   GET  /session/<id>/element/<eid>/text -> {"value": "<text>"}
-##   GET  /session/<id>/cookie             -> {"value": [{"name":"...","value":"..."}]}
+##   GET  /session/<id>/element/<eid>/text        -> {"value": "<text>"}
+##   GET  /session/<id>/element/<eid>/attribute/<n> -> {"value": "<attr-val>"}
+##   GET  /session/<id>/cookie                    -> {"value": [{"name":"...","value":"..."}]}
 
 import std/[net, os, strutils, typedthreads]
 
@@ -57,6 +58,8 @@ proc handle(meth, path: string): string =
       """{"value":"You are in a dialogs! I've seen... not much."}"""
     elif path.endsWith("/text"):
       """{"value":"""" & MOCK_ELEMENT_TEXT & """"}"""
+    elif "/attribute/" in path:
+      """{"value":"mock-attribute-value"}"""
     elif path.endsWith("/alert/accept") or path.endsWith("/accept_alert"):
       """{"value":null}"""
     elif path.endsWith("/cookie"):

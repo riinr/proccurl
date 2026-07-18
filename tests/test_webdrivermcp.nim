@@ -135,6 +135,7 @@ suite "webdrivermcp scenarios":
     check "wd_rect" in names
     check "wd_visible_text" in names
     check "wd_active_element" in names
+    check "wd_attribute" in names
 
   test "Create a webdriver and a session":
     let srv = startServer()
@@ -353,3 +354,12 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_active_element", %*{"session_id": sid})
     check getText(r, "text").contains("Example Domain")
+
+  test "Get an element attribute":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_attribute", %*{"session_id": sid, "css_selector": "a", "attr_name": "href"})
+    check getText(r, "text").contains("mock-attribute-value")

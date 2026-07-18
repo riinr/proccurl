@@ -203,6 +203,14 @@ proc defineTools(): seq[Tool] =
       inputSchema: toolSchema(
         [("session_id", "string", "Session id")],
         ["session_id"])),
+    Tool(
+      name: "wd_attribute",
+      description: "Get the value of an attribute on the first element matching the CSS selector",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element"),
+         ("attr_name", "string", "Name of the attribute to retrieve")],
+        ["session_id", "css_selector", "attr_name"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -441,6 +449,16 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       let elem = session.activeElement()
       result = contentResult(id, elem.visibleText())
+
+    of "wd_attribute":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let attr = args["attr_name"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        result = contentResult(id, opt.get.attribute(attr))
+      else:
+        result = contentResult(id, "element not found")
 
     else:
       result = jsonRpcResult(id, %*{
