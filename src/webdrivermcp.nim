@@ -124,6 +124,12 @@ proc defineTools(): seq[Tool] =
          ("name", "string", "Cookie name to delete")],
         ["session_id", "name"])),
     Tool(
+      name: "wd_forward",
+      description: "Navigate forward in the browser history",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
+    Tool(
       name: "wd_back",
       description: "Navigate back in the browser history",
       inputSchema: toolSchema(
@@ -299,6 +305,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let name = args["name"].getStr()
       session.deleteCookie(name)
       result = contentResult(id, "cookie '" & name & "' deleted")
+
+    of "wd_forward":
+      let session = getSession(id, args)
+      session.forward()
+      result = contentResult(id, "navigated forward")
 
     of "wd_back":
       let session = getSession(id, args)
