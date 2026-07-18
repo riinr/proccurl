@@ -111,6 +111,13 @@ proc defineTools(): seq[Tool] =
         [("session_id", "string", "Session id")],
         ["session_id"])),
     Tool(
+      name: "wd_get_cookie",
+      description: "Get a specific cookie by name in the current session",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("name", "string", "Cookie name to get")],
+        ["session_id", "name"])),
+    Tool(
       name: "wd_delete_all_cookies",
       description: "Delete all cookies in the current session",
       inputSchema: toolSchema(
@@ -305,6 +312,16 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let name = args["name"].getStr()
       session.deleteCookie(name)
       result = contentResult(id, "cookie '" & name & "' deleted")
+
+    of "wd_get_cookie":
+      let session = getSession(id, args)
+      let name = args["name"].getStr()
+      let opt = session.getCookie(name)
+      if opt.isSome:
+        let c = opt.get
+        result = contentResult(id, c.name & "=" & c.value)
+      else:
+        result = contentResult(id, "cookie not found")
 
     of "wd_forward":
       let session = getSession(id, args)

@@ -51,6 +51,8 @@ proc handle(meth, path: string): string =
       """{"value":null}"""
     elif path.endsWith("/cookie"):
       """{"value":[{"name":"test","value":"test_value","path":"/","domain":"example.com","secure":false,"httpOnly":true}]}"""
+    elif "/cookie/" in path:
+      """{"value":{"name":"test","value":"test_value","path":"/","domain":"example.com","secure":false,"httpOnly":true}}"""
     else:
       """{"value":null}"""
   "HTTP/1.1 200 OK\r\nContent-Length: " & $body.len &

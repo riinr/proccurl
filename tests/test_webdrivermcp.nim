@@ -120,6 +120,7 @@ suite "webdrivermcp scenarios":
     check "wd_dismiss_alert" in names
     check "wd_alert_text" in names
     check "wd_all_cookies" in names
+    check "wd_get_cookie" in names
     check "wd_delete_all_cookies" in names
     check "wd_delete_cookie" in names
     check "wd_forward" in names
@@ -225,6 +226,15 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_delete_cookie", %*{"session_id": sid, "name": "test"})
     check getText(r, "text").contains("cookie 'test' deleted")
+
+  test "Get a cookie by name":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_get_cookie", %*{"session_id": sid, "name": "test"})
+    check getText(r, "text").contains("test=test_value")
 
   test "Navigate forward":
     let srv = startServer()
