@@ -29,6 +29,7 @@ Feature: WebDriver MCP
     And the tools include wd_title
     And the tools include wd_width
     And the tools include wd_y
+    And the tools include wd_rect
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -132,3 +133,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_y
     Then the window y-coordinate is "0"
+
+  Scenario: Get the window rect
+    Given an open webdriver session on "https://example.com"
+    When I call wd_rect
+    Then the window rect includes "x=0.0, y=0.0, width=1024.0, height=768.0"

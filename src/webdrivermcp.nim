@@ -184,6 +184,12 @@ proc defineTools(): seq[Tool] =
       inputSchema: toolSchema(
         [("session_id", "string", "Session id")],
         ["session_id"])),
+    Tool(
+      name: "wd_rect",
+      description: "Get the current window rect (x, y, width, height)",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -403,6 +409,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       let y = session.currentWindow().rect().y
       result = contentResult(id, $y)
+
+    of "wd_rect":
+      let session = getSession(id, args)
+      let r = session.currentWindow().rect()
+      result = contentResult(id, "x=" & $r.x & ", y=" & $r.y & ", width=" & $r.width & ", height=" & $r.height)
 
     else:
       result = jsonRpcResult(id, %*{

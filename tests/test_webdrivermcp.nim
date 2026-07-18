@@ -132,6 +132,7 @@ suite "webdrivermcp scenarios":
     check "wd_title" in names
     check "wd_width" in names
     check "wd_y" in names
+    check "wd_rect" in names
 
   test "Create a webdriver and a session":
     let srv = startServer()
@@ -323,3 +324,12 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_y", %*{"session_id": sid})
     check getText(r, "text").contains("0")
+
+  test "Get the window rect":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_rect", %*{"session_id": sid})
+    check getText(r, "text").contains("x=0.0, y=0.0, width=1024.0, height=768.0")
