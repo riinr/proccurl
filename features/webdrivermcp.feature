@@ -33,6 +33,7 @@ Feature: WebDriver MCP
     And the tools include wd_visible_text
     And the tools include wd_active_element
     And the tools include wd_attribute
+    And the tools include wd_clear
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -156,3 +157,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_attribute with css_selector "a" and attr_name "href"
     Then the attribute value is "mock-attribute-value"
+
+  Scenario: Clear an element
+    Given an open webdriver session on "https://example.com"
+    When I call wd_clear with css_selector "input"
+    Then the element is cleared

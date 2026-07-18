@@ -211,6 +211,13 @@ proc defineTools(): seq[Tool] =
          ("css_selector", "string", "CSS selector to find the element"),
          ("attr_name", "string", "Name of the attribute to retrieve")],
         ["session_id", "css_selector", "attr_name"])),
+    Tool(
+      name: "wd_clear",
+      description: "Clear the content of the first element matching the CSS selector",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element")],
+        ["session_id", "css_selector"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -457,6 +464,16 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let opt = session.findElement(css)
       if opt.isSome:
         result = contentResult(id, opt.get.attribute(attr))
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_clear":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        opt.get.clear()
+        result = contentResult(id, "element cleared")
       else:
         result = contentResult(id, "element not found")
 
