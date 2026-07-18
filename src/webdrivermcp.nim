@@ -92,6 +92,12 @@ proc defineTools(): seq[Tool] =
       inputSchema: toolSchema(
         [("session_id", "string", "Session id")],
         ["session_id"])),
+    Tool(
+      name: "wd_alert_text",
+      description: "Get the text of a JavaScript alert dialog in the current session",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -229,6 +235,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       session.acceptAlert()
       result = contentResult(id, "alert accepted")
+
+    of "wd_alert_text":
+      let session = getSession(id, args)
+      let text = session.alertText()
+      result = contentResult(id, text)
 
     else:
       result = jsonRpcResult(id, %*{

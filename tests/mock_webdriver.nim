@@ -11,6 +11,8 @@
 ##   POST /session/<id>/element         -> {"value":{"element-...-cf": <eid>}}
 ##   POST /session/<id>/alert/accept    -> {"value":null}
 ##   POST /session/<id>/accept_alert    -> {"value":null}
+##   GET  /session/<id>/alert/text          -> {"value": "<alert text>"}
+##   GET  /session/<id>/alert_text          -> {"value": "<alert text>"}
 ##   GET  /session/<id>/element/<eid>/text -> {"value": "<text>"}
 
 import std/[net, os, strutils, typedthreads]
@@ -33,6 +35,8 @@ proc handle(meth, path: string): string =
       """{"value":"""" & MOCK_PAGE_SOURCE & """"}"""
     elif path.endsWith("/element"):
       """{"value":{"element-6066-11e4-a52e-4f735466cecf":"""" & MOCK_ELEMENT_ID & """"}}"""
+    elif path.endsWith("/alert/text") or path.endsWith("/alert_text"):
+      """{"value":"You are in a dialogs! I've seen... not much."}"""
     elif path.endsWith("/text"):
       """{"value":"""" & MOCK_ELEMENT_TEXT & """"}"""
     elif path.endsWith("/alert/accept") or path.endsWith("/accept_alert"):

@@ -117,6 +117,7 @@ suite "webdrivermcp scenarios":
     check "wd_find_element" in names
     check "wd_get_text" in names
     check "wd_accept_alert" in names
+    check "wd_alert_text" in names
 
   test "Create a webdriver and a session":
     let srv = startServer()
@@ -172,3 +173,12 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_accept_alert", %*{"session_id": sid})
     check getText(r, "text").contains("alert accepted")
+
+  test "Get alert text":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_alert_text", %*{"session_id": sid})
+    check getText(r, "text").contains("You are in a dialogs! I've seen... not much.")
