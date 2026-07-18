@@ -11,6 +11,7 @@
 ##   POST /session/<id>/back            -> {"value": null}
 ##   GET  /session/<id>/source          -> {"value": "<html>..."}
 ##   GET  /session/<id>/title           -> {"value": "<title>"}
+##   GET  /session/<id>/element/active  -> {"value":{"element-...-cf":<eid>}}
 ##   GET  /session/<id>/window/rect     -> {"value": {x,y,width,height}}
 ##   POST /session/<id>/element         -> {"value":{"element-...-cf": <eid>}}
 ##   POST /session/<id>/alert/accept    -> {"value":null}
@@ -48,6 +49,8 @@ proc handle(meth, path: string): string =
       """{"value":"""" & MOCK_PAGE_TITLE & """"}"""
     elif path.endsWith("/rect"):
       """{"value":{"x":0,"y":0,"width":1024,"height":768}}"""
+    elif path.endsWith("/element/active"):
+      """{"value":{"element-6066-11e4-a52e-4f735466cecf":"""" & MOCK_ELEMENT_ID & """"}}"""
     elif path.endsWith("/element"):
       """{"value":{"element-6066-11e4-a52e-4f735466cecf":"""" & MOCK_ELEMENT_ID & """"}}"""
     elif path.endsWith("/alert/text") or path.endsWith("/alert_text"):

@@ -134,6 +134,7 @@ suite "webdrivermcp scenarios":
     check "wd_y" in names
     check "wd_rect" in names
     check "wd_visible_text" in names
+    check "wd_active_element" in names
 
   test "Create a webdriver and a session":
     let srv = startServer()
@@ -342,4 +343,13 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_visible_text", %*{"session_id": sid, "css_selector": "h1"})
+    check getText(r, "text").contains("Example Domain")
+
+  test "Get the active element text":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_active_element", %*{"session_id": sid})
     check getText(r, "text").contains("Example Domain")

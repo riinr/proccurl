@@ -31,6 +31,7 @@ Feature: WebDriver MCP
     And the tools include wd_y
     And the tools include wd_rect
     And the tools include wd_visible_text
+    And the tools include wd_active_element
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -144,3 +145,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_visible_text with css_selector "h1"
     Then the visible text is "Example Domain"
+
+  Scenario: Get the active element text
+    Given an open webdriver session on "https://example.com"
+    When I call wd_active_element
+    Then the active element text is "Example Domain"

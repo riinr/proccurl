@@ -197,6 +197,12 @@ proc defineTools(): seq[Tool] =
         [("session_id", "string", "Session id"),
          ("css_selector", "string", "CSS selector to find the element")],
         ["session_id", "css_selector"])),
+    Tool(
+      name: "wd_active_element",
+      description: "Get the visible text of the currently focused element",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -430,6 +436,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
         result = contentResult(id, opt.get.visibleText())
       else:
         result = contentResult(id, "element not found")
+
+    of "wd_active_element":
+      let session = getSession(id, args)
+      let elem = session.activeElement()
+      result = contentResult(id, elem.visibleText())
 
     else:
       result = jsonRpcResult(id, %*{
