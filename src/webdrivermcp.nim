@@ -110,6 +110,12 @@ proc defineTools(): seq[Tool] =
       inputSchema: toolSchema(
         [("session_id", "string", "Session id")],
         ["session_id"])),
+    Tool(
+      name: "wd_current_url",
+      description: "Get the current URL of the session",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -263,6 +269,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       session.back()
       result = contentResult(id, "navigated back")
+
+    of "wd_current_url":
+      let session = getSession(id, args)
+      let url = session.currentUrl()
+      result = contentResult(id, url)
 
     else:
       result = jsonRpcResult(id, %*{

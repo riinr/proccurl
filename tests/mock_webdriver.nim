@@ -6,6 +6,7 @@
 ##   GET  /status                       -> {"value":{"ready":true}}
 ##   POST /session                      -> {"value":{"sessionId": <id>}}
 ##   DELETE /session/<id>               -> {"value": null}
+##   GET  /session/<id>/url              -> {"value": "<current url>"}
 ##   POST /session/<id>/url             -> {"value": null}
 ##   POST /session/<id>/back            -> {"value": null}
 ##   GET  /session/<id>/source          -> {"value": "<html>..."}
@@ -31,8 +32,13 @@ proc handle(meth, path: string): string =
   of "/session":
     """{"value":{"sessionId":"""" & MOCK_SESSION_ID & """"}}"""
   else:
-    if path.endsWith("/url") or path.endsWith("/back"):
+    if path.endsWith("/back"):
       """{"value":null}"""
+    elif path.endsWith("/url"):
+      if meth == "GET":
+        """{"value":"https://example.com"}"""
+      else:
+        """{"value":null}"""
     elif path.endsWith("/source"):
       """{"value":"""" & MOCK_PAGE_SOURCE & """"}"""
     elif path.endsWith("/element"):
