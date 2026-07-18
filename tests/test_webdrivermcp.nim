@@ -352,7 +352,7 @@ suite "webdrivermcp scenarios":
     let r = srv.mcpCall(3, "wd_visible_text", %*{"session_id": sid, "css_selector": "h1"})
     check getText(r, "text").contains("Example Domain")
 
-  test "Get the active element text":
+  test "Get the active element selector":
     let srv = startServer()
     defer: srv.close()
     let url = "http://127.0.0.1:" & $gMockPort

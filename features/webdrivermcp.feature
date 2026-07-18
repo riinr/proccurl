@@ -153,7 +153,7 @@ Feature: WebDriver MCP
     When I call wd_visible_text with css_selector "h1"
     Then the visible text is "Example Domain"
 
-  Scenario: Get the active element text
+  Scenario: Get the active element selector
     Given an open webdriver session on "https://example.com"
     When I call wd_active_element
     Then it return element css selector
