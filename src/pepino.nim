@@ -41,7 +41,7 @@
 ## (The library adds no timing line; the run exits non-zero when any scenario is
 ## `failed` or `failing`.)
 
-import std/[os, tables, exitprocs, strutils, macros]
+import std/[hashes, os, tables, exitprocs, strutils, macros]
 # Pull in `std/unittest` and re-export the *whole module* (not just selected
 # symbols). Re-exporting individual templates (`suite`/`test`) is not enough:
 # those templates call methods on unittest's internal `Formatter` type, and a
@@ -218,6 +218,15 @@ proc printSummary() =
   # driver output stays clean.
   if gCallFile.len == 0:
     return
+  # Drain gStatus into a local seq once. Under --mm:arc and --mm:orc, the
+  # Table[string, ...] pairs iterator may yield by sink / lent and iterating
+  # twice causes a SIGSEGV, and getOrDefault also misses entries. We snapshot
+  # the data (with proper copies) into a local seq and use that for everything.
+  var gStatusSeq: seq[(string, PepinoStatus)] = @[]
+  for k, v in gStatus:
+    stderr.writeLine "DEBUG  '" & k & "' -> " & $v & " hash=" & $hash(k)
+    gStatusSeq.add((k, v))
+  stderr.writeLine "DEBUG gStatus len=" & $gStatusSeq.len
   var passed, failed, undefined: int
 
   # Derive the feature path fresh, at exit, from the surviving call-site file.
@@ -282,12 +291,23 @@ proc printSummary() =
   addUnits(feature.scenarios, units)
   for r in feature.rules:
     addUnits(r.scenarios, units)
+  # DEBUG: check parsed names
+  for i, u2 in units:
+    stderr.writeLine "DEBUG unit[" & $i & "] name='" & u2[0] & "' hash=" & $hash(u2[0]) & " len=" & $u2[0].len
 
   # Emit one scenario line per unit and tally its outcome. The three outcomes
   # mirror Cucumber: a referenced unit whose test body passed, one whose test
   # body failed, or one never referenced at all (failing).
-  template emitUnit(u: untyped) =
-    let st = gStatus.getOrDefault(u[0], psUndefined)
+  #
+  # Lookup uses gStatusSeq (the local snapshot) to avoid Table[string, ...]
+  # iteration and getOrDefault issues under --mm:arc and --mm:orc.
+  for u in units:
+    var st = psUndefined
+    for i in 0..<gStatusSeq.len:
+      if gStatusSeq[i][0] == u[0]:
+        st = gStatusSeq[i][1]
+        break
+    stderr.writeLine "DEBUG lookup '" & u[0] & "' -> " & $st
     case st
     of psPassed:
       inc passed
@@ -304,9 +324,6 @@ proc printSummary() =
       outp.add("  Scenario: "); outp.add(u[1])
       if hasPath: outp.add(" # "); outp.add(pathStr)
       outp.add("\n    failing\n\n")
-
-  for u in units:
-    emitUnit(u)
 
   # Summary footer -- Cucumber style.
   var scenParts: seq[string] = @[]
