@@ -160,6 +160,12 @@ proc defineTools(): seq[Tool] =
       inputSchema: toolSchema(
         [("session_id", "string", "Session id")],
         ["session_id"])),
+    Tool(
+      name: "wd_status",
+      description: "Get the WebDriver status (message and ready state)",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -359,6 +365,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       let s = session.status()
       result = contentResult(id, $s.ready)
+
+    of "wd_status":
+      let session = getSession(id, args)
+      let s = session.status()
+      result = contentResult(id, "ready=" & $s.ready & ", message=" & s.message)
 
     else:
       result = jsonRpcResult(id, %*{

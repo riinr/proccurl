@@ -128,6 +128,7 @@ suite "webdrivermcp scenarios":
     check "wd_refresh" in names
     check "wd_current_url" in names
     check "wd_running" in names
+    check "wd_status" in names
 
   test "Create a webdriver and a session":
     let srv = startServer()
@@ -282,3 +283,13 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_running", %*{"session_id": sid})
     check getText(r, "text").contains("true")
+
+  test "Get WebDriver status":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_status", %*{"session_id": sid})
+    check getText(r, "text").contains("ready=true")
+    check getText(r, "text").contains("message=mock ready")

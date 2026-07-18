@@ -25,6 +25,7 @@ Feature: WebDriver MCP
     And the tools include wd_refresh
     And the tools include wd_current_url
     And the tools include wd_running
+    And the tools include wd_status
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -108,3 +109,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_running
     Then the browser status is "true"
+
+  Scenario: Get WebDriver status
+    Given an open webdriver session on "https://example.com"
+    When I call wd_status
+    Then the WebDriver status includes "ready=true"
