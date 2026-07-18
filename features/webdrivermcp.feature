@@ -26,6 +26,7 @@ Feature: WebDriver MCP
     And the tools include wd_current_url
     And the tools include wd_running
     And the tools include wd_status
+    And the tools include wd_title
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -114,3 +115,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_status
     Then the WebDriver status includes "ready=true"
+
+  Scenario: Get the page title
+    Given an open webdriver session on "https://example.com"
+    When I call wd_title
+    Then the page title is "Example Domain"

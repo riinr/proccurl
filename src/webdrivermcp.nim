@@ -166,6 +166,12 @@ proc defineTools(): seq[Tool] =
       inputSchema: toolSchema(
         [("session_id", "string", "Session id")],
         ["session_id"])),
+    Tool(
+      name: "wd_title",
+      description: "Get the current page title",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -370,6 +376,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       let s = session.status()
       result = contentResult(id, "ready=" & $s.ready & ", message=" & s.message)
+
+    of "wd_title":
+      let session = getSession(id, args)
+      let t = session.title()
+      result = contentResult(id, t)
 
     else:
       result = jsonRpcResult(id, %*{

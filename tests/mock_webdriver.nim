@@ -10,6 +10,7 @@
 ##   POST /session/<id>/url             -> {"value": null}
 ##   POST /session/<id>/back            -> {"value": null}
 ##   GET  /session/<id>/source          -> {"value": "<html>..."}
+##   GET  /session/<id>/title           -> {"value": "<title>"}
 ##   POST /session/<id>/element         -> {"value":{"element-...-cf": <eid>}}
 ##   POST /session/<id>/alert/accept    -> {"value":null}
 ##   POST /session/<id>/accept_alert    -> {"value":null}
@@ -23,6 +24,7 @@ import std/[net, os, strutils, typedthreads]
 const MOCK_SESSION_ID = "mock-session-0123"
 const MOCK_ELEMENT_ID = "mock-element-4567"
 const MOCK_PAGE_SOURCE = "<html><body><h1>Example Domain</h1></body></html>"
+const MOCK_PAGE_TITLE = "Example Domain"
 const MOCK_ELEMENT_TEXT = "Example Domain"
 
 proc handle(meth, path: string): string =
@@ -41,6 +43,8 @@ proc handle(meth, path: string): string =
         """{"value":null}"""
     elif path.endsWith("/source"):
       """{"value":"""" & MOCK_PAGE_SOURCE & """"}"""
+    elif path.endsWith("/title"):
+      """{"value":"""" & MOCK_PAGE_TITLE & """"}"""
     elif path.endsWith("/element"):
       """{"value":{"element-6066-11e4-a52e-4f735466cecf":"""" & MOCK_ELEMENT_ID & """"}}"""
     elif path.endsWith("/alert/text") or path.endsWith("/alert_text"):
