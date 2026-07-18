@@ -535,7 +535,7 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
     of "wd_active_element":
       let session = getSession(id, args)
       let elem = session.activeElement()
-      result = contentResult(id, elem.visibleText())
+      result = contentResult(id, some(elem).toString)
 
     of "wd_attribute":
       let session = getSession(id, args)
