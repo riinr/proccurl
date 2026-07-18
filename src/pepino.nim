@@ -73,6 +73,31 @@ var gCallFile: string
 var gResolved: bool
 var gStatus: Table[string, PepinoStatus]
 
+# A minimal OutputFormatter that captures the checkpoint messages emitted by a
+# failed `check` (unittest calls `failureOccurred(checkpoints, ...)` for each
+# failed assertion, then `testEnded` with the owning test name). We stash them
+# in the captor's `reasons` table keyed by the test name -- which is exactly the
+# scenario name pepino uses as its status key -- so the summary can print them.
+type ReasonCaptor = ref object of OutputFormatter
+  cur: seq[string]
+  reasons: Table[string, seq[string]]
+
+method failureOccurred(f: ReasonCaptor, checkpoints: seq[string],
+    stackTrace: string) {.gcsafe.} =
+  for c in checkpoints:
+    f.cur.add(c)
+
+method testEnded(f: ReasonCaptor, testResult: TestResult) {.gcsafe.} =
+  if f.cur.len > 0:
+    f.reasons[testResult.testName] = f.cur
+  f.cur.setLen(0)
+
+# Single captor instance that records, per scenario (test) name, the
+# "Check failed: ..." messages emitted by stdlib `unittest`. Populated via a
+# custom OutputFormatter so pepino can show *why* a scenario failed next to its
+# own `fail` line.
+var gCaptor: ReasonCaptor
+
 proc resolveFeaturePath(testFile: string): string =
   ## Derive `../features/<name>.feature` from the importing test file's path.
   let dir = testFile.splitFile.dir
@@ -89,6 +114,9 @@ proc initCoverage*(testFile: string) =
   if gResolved:
     return
   gStatus = initTable[string, PepinoStatus]()
+  # Register a formatter that records failure reasons for later display.
+  gCaptor = ReasonCaptor(reasons: initTable[string, seq[string]]())
+  addOutputFormatter(gCaptor)
   gCallFile = testFile
   gResolved = true
 
@@ -224,9 +252,7 @@ proc printSummary() =
   # the data (with proper copies) into a local seq and use that for everything.
   var gStatusSeq: seq[(string, PepinoStatus)] = @[]
   for k, v in gStatus:
-    stderr.writeLine "DEBUG  '" & k & "' -> " & $v & " hash=" & $hash(k)
     gStatusSeq.add((k, v))
-  stderr.writeLine "DEBUG gStatus len=" & $gStatusSeq.len
   var passed, failed, undefined: int
 
   # Derive the feature path fresh, at exit, from the surviving call-site file.
@@ -291,9 +317,6 @@ proc printSummary() =
   addUnits(feature.scenarios, units)
   for r in feature.rules:
     addUnits(r.scenarios, units)
-  # DEBUG: check parsed names
-  for i, u2 in units:
-    stderr.writeLine "DEBUG unit[" & $i & "] name='" & u2[0] & "' hash=" & $hash(u2[0]) & " len=" & $u2[0].len
 
   # Emit one scenario line per unit and tally its outcome. The three outcomes
   # mirror Cucumber: a referenced unit whose test body passed, one whose test
@@ -307,7 +330,6 @@ proc printSummary() =
       if gStatusSeq[i][0] == u[0]:
         st = gStatusSeq[i][1]
         break
-    stderr.writeLine "DEBUG lookup '" & u[0] & "' -> " & $st
     case st
     of psPassed:
       inc passed
@@ -318,7 +340,15 @@ proc printSummary() =
       inc failed
       outp.add("  Scenario: "); outp.add(u[1])
       if hasPath: outp.add(" # "); outp.add(pathStr)
-      outp.add("\n    fail\n\n")
+      outp.add("\n    fail\n")
+      # Show *why* the scenario failed: the captured "Check failed: ..." lines
+      # for this scenario (keyed by its name), if any were recorded.
+      if gCaptor != nil and gCaptor.reasons.hasKey(u[0]):
+        for r in gCaptor.reasons[u[0]]:
+          outp.add("      ")
+          outp.add(r.replace("\n", "\n      "))
+          outp.add("\n")
+      outp.add("\n")
     of psUndefined:
       inc undefined
       outp.add("  Scenario: "); outp.add(u[1])
