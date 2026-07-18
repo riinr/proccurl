@@ -148,7 +148,7 @@ suite "webdrivermcp scenarios":
     defer: srv.close()
     let url = "http://127.0.0.1:" & $gMockPort
     let r1 = srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
-    check getText(r1, "text").contains("webdriver created")
+    check "webdriver created" in getText(r1, "text")
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     check sid.len > 0
     check sid == "mock-session-0123"
@@ -161,7 +161,7 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     discard srv.mcpCall(3, "wd_navigate", %*{"session_id": sid, "url": "https://example.com"})
     let src = getText(srv.mcpCall(4, "wd_get_page_source", %*{"session_id": sid}), "text")
-    check src.contains("Example Domain")
+    check "Example Domain" in src
 
   test "Find an element and read its text":
     let srv = startServer()
@@ -174,7 +174,7 @@ suite "webdrivermcp scenarios":
         %*{"session_id": sid, "selector": "h1", "strategy": "css"}),
       "text")
     check eid.len > 0
-    check eid.contains("mock-element-4567")
+    check "mock-element-4567" in eid
     let txt = getText(
       srv.mcpCall(4, "wd_get_text", %*{"session_id": sid, "element_id": eid}),
       "text")
@@ -187,7 +187,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_close_session", %*{"session_id": sid})
-    check getText(r, "text").contains("session closed")
+    check "session closed" in getText(r, "text")
 
   test "Accept a JavaScript alert":
     let srv = startServer()
@@ -196,7 +196,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_accept_alert", %*{"session_id": sid})
-    check getText(r, "text").contains("alert accepted")
+    check "alert accepted" in getText(r, "text")
 
   test "Dismiss a JavaScript alert":
     let srv = startServer()
@@ -205,7 +205,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_dismiss_alert", %*{"session_id": sid})
-    check getText(r, "text").contains("alert dismissed")
+    check "alert dismissed" in getText(r, "text")
 
   test "Get alert text":
     let srv = startServer()
@@ -214,7 +214,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_alert_text", %*{"session_id": sid})
-    check getText(r, "text").contains("You are in a dialogs! I've seen... not much.")
+    check "You are in a dialogs! I've seen... not much." in getText(r, "text")
 
   test "Get all cookies":
     let srv = startServer()
@@ -223,7 +223,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_all_cookies", %*{"session_id": sid})
-    check getText(r, "text").contains("test=test_value")
+    check "test=test_value" in getText(r, "text")
 
   test "Delete all cookies":
     let srv = startServer()
@@ -232,7 +232,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_delete_all_cookies", %*{"session_id": sid})
-    check getText(r, "text").contains("all cookies deleted")
+    check "all cookies deleted" in getText(r, "text")
 
   test "Delete a cookie by name":
     let srv = startServer()
@@ -241,7 +241,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_delete_cookie", %*{"session_id": sid, "name": "test"})
-    check getText(r, "text").contains("cookie 'test' deleted")
+    check "cookie 'test' deleted" in getText(r, "text")
 
   test "Get a cookie by name":
     let srv = startServer()
@@ -250,7 +250,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_get_cookie", %*{"session_id": sid, "name": "test"})
-    check getText(r, "text").contains("test=test_value")
+    check "test=test_value" in getText(r, "text")
 
   test "Navigate forward":
     let srv = startServer()
@@ -259,7 +259,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_forward", %*{"session_id": sid})
-    check getText(r, "text").contains("navigated forward")
+    check "navigated forward" in getText(r, "text")
 
   test "Navigate back":
     let srv = startServer()
@@ -268,7 +268,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_back", %*{"session_id": sid})
-    check getText(r, "text").contains("navigated back")
+    check "navigated back" in getText(r, "text")
 
   test "Refresh the page":
     let srv = startServer()
@@ -277,7 +277,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_refresh", %*{"session_id": sid})
-    check getText(r, "text").contains("page refreshed")
+    check "page refreshed" in getText(r, "text")
 
   test "Get current URL":
     let srv = startServer()
@@ -286,7 +286,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_current_url", %*{"session_id": sid})
-    check getText(r, "text").contains("https://example.com")
+    check "https://example.com" in getText(r, "text")
 
   test "Check if the browser is running":
     let srv = startServer()
@@ -295,7 +295,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_running", %*{"session_id": sid})
-    check getText(r, "text").contains("true")
+    check "true" in getText(r, "text")
 
   test "Get WebDriver status":
     let srv = startServer()
@@ -304,8 +304,8 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_status", %*{"session_id": sid})
-    check getText(r, "text").contains("ready=true")
-    check getText(r, "text").contains("message=mock ready")
+    check "ready=true" in getText(r, "text")
+    check "message=mock ready" in getText(r, "text")
 
   test "Get the page title":
     let srv = startServer()
@@ -314,7 +314,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_title", %*{"session_id": sid})
-    check getText(r, "text").contains("Example Domain")
+    check "Example Domain" in getText(r, "text")
 
   test "Get the window width":
     let srv = startServer()
@@ -323,7 +323,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_width", %*{"session_id": sid})
-    check getText(r, "text").contains("1024")
+    check "1024" in getText(r, "text")
 
   test "Get the window y-coordinate":
     let srv = startServer()
@@ -332,7 +332,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_y", %*{"session_id": sid})
-    check getText(r, "text").contains("0")
+    check "0" in getText(r, "text")
 
   test "Get the window rect":
     let srv = startServer()
@@ -341,7 +341,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_rect", %*{"session_id": sid})
-    check getText(r, "text").contains("x=0.0, y=0.0, width=1024.0, height=768.0")
+    check "x=0.0, y=0.0, width=1024.0, height=768.0" in getText(r, "text")
 
   test "Get visible text of an element":
     let srv = startServer()
@@ -350,7 +350,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_visible_text", %*{"session_id": sid, "css_selector": "h1"})
-    check getText(r, "text").contains("Example Domain")
+    check "Example Domain" in getText(r, "text")
 
   test "Get the active element selector":
     let srv = startServer()
@@ -359,7 +359,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_active_element", %*{"session_id": sid})
-    check getText(r, "text").contains("mock-element-4567")
+    check "mock-element-4567" in getText(r, "text")
 
   test "Get an element attribute":
     let srv = startServer()
@@ -368,7 +368,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_attribute", %*{"session_id": sid, "css_selector": "a", "attr_name": "href"})
-    check getText(r, "text").contains("mock-attribute-value")
+    check "mock-attribute-value" in getText(r, "text")
 
   test "Clear an element":
     let srv = startServer()
@@ -377,7 +377,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_clear", %*{"session_id": sid, "css_selector": "input"})
-    check getText(r, "text").contains("element cleared")
+    check "element cleared" in getText(r, "text")
 
   test "Click on an element":
     let srv = startServer()
@@ -386,7 +386,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_click", %*{"session_id": sid, "css_selector": "button"})
-    check getText(r, "text").contains("element clicked")
+    check "element clicked" in getText(r, "text")
 
   test "Right-click on an element":
     let srv = startServer()
@@ -395,7 +395,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_click", %*{"session_id": sid, "css_selector": "button", "button": "mbRight"})
-    check getText(r, "text").contains("element clicked")
+    check "element clicked" in getText(r, "text")
 
   test "Double-click on an element":
     let srv = startServer()
@@ -404,7 +404,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_double_click", %*{"session_id": sid, "css_selector": "button"})
-    check getText(r, "text").contains("element double-clicked")
+    check "element double-clicked" in getText(r, "text")
 
   test "Right double-click on an element":
     let srv = startServer()
@@ -413,7 +413,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_double_click", %*{"session_id": sid, "css_selector": "button", "button": "mbRight"})
-    check getText(r, "text").contains("element double-clicked")
+    check "element double-clicked" in getText(r, "text")
 
   test "Drag an element by offset":
     let srv = startServer()
@@ -422,7 +422,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_drag_and_drop", %*{"session_id": sid, "css_selector": "div", "delta_x": 100, "delta_y": 50})
-    check getText(r, "text").contains("element dragged")
+    check "element dragged" in getText(r, "text")
 
   test "Send keys to an element":
     let srv = startServer()
@@ -431,7 +431,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_send_keys", %*{"session_id": sid, "css_selector": "input", "text": "hello world"})
-    check getText(r, "text").contains("keys sent")
+    check "keys sent" in getText(r, "text")
 
   test "Get a CSS property value":
     let srv = startServer()
@@ -440,4 +440,4 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_css_property_value", %*{"session_id": sid, "css_selector": "h1", "name": "color"})
-    check getText(r, "text").contains("mock-css-value")
+    check "mock-css-value" in getText(r, "text")
