@@ -36,6 +36,7 @@ Feature: WebDriver MCP
     And the tools include wd_clear
     And the tools include wd_click
     And the tools include wd_double_click
+    And the tools include wd_drag_and_drop
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -184,3 +185,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_double_click with css_selector "button" and button "mbRight"
     Then the element is double-clicked
+
+  Scenario: Drag an element by offset
+    Given an open webdriver session on "https://example.com"
+    When I call wd_drag_and_drop with css_selector "div" and delta_x 100 and delta_y 50
+    Then the element is dragged

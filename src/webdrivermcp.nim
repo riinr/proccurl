@@ -234,6 +234,15 @@ proc defineTools(): seq[Tool] =
          ("css_selector", "string", "CSS selector to find the element"),
          ("button", "string", "Mouse button: mbLeft, mbMiddle, or mbRight (default: mbLeft)")],
         ["session_id", "css_selector"])),
+    Tool(
+      name: "wd_drag_and_drop",
+      description: "Drag the first element matching the CSS selector by deltaX, deltaY pixels",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element"),
+         ("delta_x", "number", "Horizontal offset in pixels"),
+         ("delta_y", "number", "Vertical offset in pixels")],
+        ["session_id", "css_selector", "delta_x", "delta_y"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -520,6 +529,18 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
           else: mbLeft
         discard session.actionChain().doubleClick(opt.get, button).perform()
         result = contentResult(id, "element double-clicked")
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_drag_and_drop":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let dx = args["delta_x"].getFloat()
+      let dy = args["delta_y"].getFloat()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        discard session.actionChain().dragAndDrop(opt.get, dx, dy).perform()
+        result = contentResult(id, "element dragged")
       else:
         result = contentResult(id, "element not found")
 
