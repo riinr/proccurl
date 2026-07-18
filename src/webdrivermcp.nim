@@ -218,6 +218,14 @@ proc defineTools(): seq[Tool] =
         [("session_id", "string", "Session id"),
          ("css_selector", "string", "CSS selector to find the element")],
         ["session_id", "css_selector"])),
+    Tool(
+      name: "wd_click",
+      description: "Click on the first element matching the CSS selector using the specified mouse button",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element"),
+         ("button", "string", "Mouse button: mbLeft, mbMiddle, or mbRight (default: mbLeft)")],
+        ["session_id", "css_selector"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -474,6 +482,21 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       if opt.isSome:
         opt.get.clear()
         result = contentResult(id, "element cleared")
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_click":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        let btn = if args.hasKey("button"): args["button"].getStr() else: "mbLeft"
+        let button = case btn
+          of "mbRight": mbRight
+          of "mbMiddle": mbMiddle
+          else: mbLeft
+        discard session.actionChain().click(opt.get, button).perform()
+        result = contentResult(id, "element clicked")
       else:
         result = contentResult(id, "element not found")
 

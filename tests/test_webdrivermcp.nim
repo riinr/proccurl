@@ -137,6 +137,7 @@ suite "webdrivermcp scenarios":
     check "wd_active_element" in names
     check "wd_attribute" in names
     check "wd_clear" in names
+    check "wd_click" in names
 
   test "Create a webdriver and a session":
     let srv = startServer()
@@ -373,3 +374,21 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_clear", %*{"session_id": sid, "css_selector": "input"})
     check getText(r, "text").contains("element cleared")
+
+  test "Click on an element":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_click", %*{"session_id": sid, "css_selector": "button"})
+    check getText(r, "text").contains("element clicked")
+
+  test "Right-click on an element":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_click", %*{"session_id": sid, "css_selector": "button", "button": "mbRight"})
+    check getText(r, "text").contains("element clicked")
