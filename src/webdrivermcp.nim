@@ -154,6 +154,12 @@ proc defineTools(): seq[Tool] =
       inputSchema: toolSchema(
         [("session_id", "string", "Session id")],
         ["session_id"])),
+    Tool(
+      name: "wd_running",
+      description: "Check whether the browser is running",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -348,6 +354,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       let url = session.currentUrl()
       result = contentResult(id, url)
+
+    of "wd_running":
+      let session = getSession(id, args)
+      let s = session.status()
+      result = contentResult(id, $s.ready)
 
     else:
       result = jsonRpcResult(id, %*{
