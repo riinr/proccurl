@@ -26,11 +26,14 @@ import std/[net, os, strutils, typedthreads]
 
 const MOCK_SESSION_ID = "mock-session-0123"
 const MOCK_ELEMENT_ID = "mock-element-4567"
+const MOCK_ELEMENT_H1 = "mock-element-4567"
+const MOCK_ELEMENT_BODY = "mock-element-body"
+const MOCK_ELEMENT_HTML = "mock-element-html"
 const MOCK_PAGE_SOURCE = "<html><body><h1>Example Domain</h1></body></html>"
 const MOCK_PAGE_TITLE = "Example Domain"
 const MOCK_ELEMENT_TEXT = "Example Domain"
 
-proc handle(meth, path: string): string =
+proc handle(meth, path: string): tuple[status, body: string] =
   let body = case path
   of "/status":
     """{"value":{"ready":true,"message":"mock ready"}}"""
@@ -52,14 +55,44 @@ proc handle(meth, path: string): string =
       """{"value":{"x":0,"y":0,"width":1024,"height":768}}"""
     elif path.endsWith("/element/active"):
       """{"value":{"element-6066-11e4-a52e-4f735466cecf":"""" & MOCK_ELEMENT_ID & """"}}"""
+    elif path.endsWith("/element") and "/element/" in path:
+      # parent-element search (findElement(el, "..", XPathSelector))
+      # path: /session/<id>/element/<eid>/element
+      let cur = path.split("/element/")[1].split("/")[0]
+      if cur == MOCK_ELEMENT_HTML:
+        # html is the root: no parent -> 404 "no such element" so the
+        # toString walk terminates (findElement returns None)
+        return ("HTTP/1.1 404 Not Found",
+          """{"value":{"error":"no such element","message":"no such element"}}""")
+      else:
+        let parentId = case cur
+          of MOCK_ELEMENT_BODY: MOCK_ELEMENT_HTML
+          of MOCK_ELEMENT_H1:   MOCK_ELEMENT_BODY
+          else:                    MOCK_ELEMENT_H1
+        """{"value":{"element-6066-11e4-a52e-4f735466cecf":"""" & parentId & """"}}"""
+    elif path.endsWith("/elements") and "/element/" in path:
+      # preceding-sibling search (findElement(el, "preceding-sibling::*[1]", XPathSelector))
+      # path: /session/<id>/element/<eid>/elements
+      """{"value":[]}"""
     elif path.endsWith("/element"):
       """{"value":{"element-6066-11e4-a52e-4f735466cecf":"""" & MOCK_ELEMENT_ID & """"}}"""
     elif path.endsWith("/alert/text") or path.endsWith("/alert_text"):
       """{"value":"You are in a dialogs! I've seen... not much."}"""
+    elif path.endsWith("/name"):
+      # tagName() -> GET /session/<id>/element/<eid>/name
+      let eid = path.split("/element/")[1].split("/")[0]
+      let tag = case eid
+        of MOCK_ELEMENT_H1:   "h1"
+        of MOCK_ELEMENT_BODY: "body"
+        of MOCK_ELEMENT_HTML: "html"
+        else:                    "div"
+      """{"value":"""" & tag & """"}"""
     elif path.endsWith("/text"):
       """{"value":"""" & MOCK_ELEMENT_TEXT & """"}"""
     elif "/attribute/" in path:
       """{"value":"mock-attribute-value"}"""
+    elif "/css/" in path:
+      """{"value":"mock-css-value"}"""
     elif path.endsWith("/alert/accept") or path.endsWith("/accept_alert"):
       """{"value":null}"""
     elif path.endsWith("/cookie"):
@@ -68,8 +101,7 @@ proc handle(meth, path: string): string =
       """{"value":{"name":"test","value":"test_value","path":"/","domain":"example.com","secure":false,"httpOnly":true}}"""
     else:
       """{"value":null}"""
-  "HTTP/1.1 200 OK\r\nContent-Length: " & $body.len &
-    "\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n" & body
+  result = ("HTTP/1.1 200 OK", body)
 
 proc readHttpRequest(conn: Socket): tuple[meth, path: string] =
   var line: string
@@ -99,8 +131,9 @@ proc loop(server: Socket) {.thread.} =
     let req = conn.readHttpRequest
     if req.meth.len > 0:
       let resp = handle(req.meth, req.path)
-      var rb = resp
-      discard conn.send(rb.cstring, rb.len)
+      let full = resp.status & "\r\nContent-Length: " & $resp.body.len &
+        "\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n" & resp.body
+      discard conn.send(full.cstring, full.len)
     conn.close()
 
 var server = newSocket()

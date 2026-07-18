@@ -141,6 +141,7 @@ suite "webdrivermcp scenarios":
     check "wd_double_click" in names
     check "wd_drag_and_drop" in names
     check "wd_send_keys" in names
+    check "wd_css_property_value" in names
 
   test "Create a webdriver and a session":
     let srv = startServer()
@@ -173,7 +174,7 @@ suite "webdrivermcp scenarios":
         %*{"session_id": sid, "selector": "h1", "strategy": "css"}),
       "text")
     check eid.len > 0
-    check eid == "mock-element-4567"
+    check eid.contains("mock-element-4567")
     let txt = getText(
       srv.mcpCall(4, "wd_get_text", %*{"session_id": sid, "element_id": eid}),
       "text")
@@ -358,7 +359,7 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_active_element", %*{"session_id": sid})
-    check getText(r, "text").contains("Example Domain")
+    check getText(r, "text").contains("mock-element-4567")
 
   test "Get an element attribute":
     let srv = startServer()
@@ -431,3 +432,12 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_send_keys", %*{"session_id": sid, "css_selector": "input", "text": "hello world"})
     check getText(r, "text").contains("keys sent")
+
+  test "Get a CSS property value":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_css_property_value", %*{"session_id": sid, "css_selector": "h1", "name": "color"})
+    check getText(r, "text").contains("mock-css-value")

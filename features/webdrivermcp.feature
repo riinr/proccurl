@@ -38,6 +38,7 @@ Feature: WebDriver MCP
     And the tools include wd_double_click
     And the tools include wd_drag_and_drop
     And the tools include wd_send_keys
+    And the tools include wd_css_property_value
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -155,7 +156,7 @@ Feature: WebDriver MCP
   Scenario: Get the active element text
     Given an open webdriver session on "https://example.com"
     When I call wd_active_element
-    Then the active element text is "Example Domain"
+    Then it return element css selector
 
   Scenario: Get an element attribute
     Given an open webdriver session on "https://example.com"
@@ -196,3 +197,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_send_keys with css_selector "input" and text "hello world"
     Then the keys are sent
+
+  Scenario: Get a CSS property value
+    Given an open webdriver session on "https://example.com"
+    When I call wd_css_property_value with css_selector "h1" and name "color"
+    Then the css value is "mock-css-value"

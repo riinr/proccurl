@@ -29,7 +29,6 @@ type Tool = object
 # State shared across tool calls in a single server process.
 var gWebDriver: WebDriver
 var gSessions: Table[string, Session]
-var gElements: Table[string, Element]
 
 proc toolSchema(properties: openArray[(string, string, string)];
                 required: openArray[string]): JsonNode =
@@ -78,6 +77,13 @@ proc defineTools(): seq[Tool] =
         [("session_id", "string", "Session id"),
          ("selector", "string", "Selector value (e.g. CSS or XPath)"),
          ("strategy", "string", "Location strategy: css, xpath, link_text, partial_link_text, name, tag_name, class_name (default: css)")],
+        ["session_id", "selector"])),
+    Tool(
+      name: "wd_find_elements",
+      description: "Find elements in a session using a CSS strategy return its full CSS paths",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("selector", "string", "CSS Selector value")],
         ["session_id", "selector"])),
     Tool(
       name: "wd_get_text",
@@ -251,6 +257,14 @@ proc defineTools(): seq[Tool] =
          ("css_selector", "string", "CSS selector to find the element"),
          ("text", "string", "Text to type into the element")],
         ["session_id", "css_selector", "text"])),
+    Tool(
+      name: "wd_css_property_value",
+      description: "Get the computed value of a CSS property on the first element matching the CSS selector",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element"),
+         ("name", "string", "CSS property name (e.g. 'color', 'background-color')")],
+        ["session_id", "css_selector", "name"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -321,6 +335,34 @@ proc getStrategy(s: string): LocationStrategy =
   of "class_name", "class name": ClassNameSelector
   else: CssSelector
 
+proc parent(el: Option[Element]): Option[Element] =
+  if el.isNone: el
+  else:         el.get.findElement("..", XPathSelector)
+
+proc prevSibling(el: Option[Element]): Option[Element] =
+  if el.isNone: el
+  else:         el.get.findElement("preceding-sibling::*[1]", XPathSelector)
+
+converter toString(elementOpt: Option[Element]): string =
+  if elementOpt.isNone: return ""
+  var path: seq[string] = @[]
+  var el = elementOpt
+  while el.isSome:
+    var selector = el.get.tagName.toLower
+    if el.get.id != "":
+      selector &= "#" & el.get.id
+    else:
+      var sibling = el.prevSibling
+      var nth = 1;
+      while sibling.isSome:
+        if sibling.get.tagName.toLower == selector:
+          nth.inc
+      if nth > 1 or el.prevSibling.isSome:
+        selector &= ":nth-of-type(" & $nth & ")"
+    path.insert selector
+    el = el.parent;
+  path.join(" > ")
+
 proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
   let toolName = params{"name"}.getStr("")
   let args = params{"arguments"}
@@ -328,6 +370,7 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
     return jsonRpcError(id, -32602, "Invalid arguments")
 
   try:
+    let strategy = getStrategy(args{"strategy"}.getStr("css"))
     case toolName
     of "wd_new_web_driver":
       let url = args{"url"}.getStr("http://localhost:4444")
@@ -366,23 +409,27 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let selector = args{"selector"}.getStr("")
       if selector == "":
         return jsonRpcError(id, -32602, "Missing required argument: selector")
-      let strategy = getStrategy(args{"strategy"}.getStr("css"))
       let elOpt = session.findElement(selector, strategy)
       if elOpt.isNone:
         return jsonRpcError(id, -32602, "No element found for: " & selector)
-      let el = elOpt.get
-      gElements[el.id] = el
-      result = contentResult(id, el.id)
+      result = contentResult(id, elOpt.toString)
 
     of "wd_get_text":
       let session = getSession(id, args)
-      let eid = args{"element_id"}.getStr("")
-      if eid == "":
-        return jsonRpcError(id, -32602, "Missing required argument: element_id")
-      if not gElements.hasKey(eid):
-        return jsonRpcError(id, -32602, "Unknown element_id: " & eid)
-      let text = gElements[eid].visibleText()
-      result = contentResult(id, text)
+      if args.hasKey("element_id"):
+        let eid = args["element_id"].getStr()
+        let elOpt = session.findElement("#" & eid, strategy)
+        if elOpt.isNone:
+          return jsonRpcError(id, -32602, "Unknown element_id: " & eid)
+        result = contentResult(id, elOpt.get.visibleText())
+      else:
+        let selector = args{"selector"}.getStr("")
+        if selector == "":
+          return jsonRpcError(id, -32602, "Missing required argument: selector")
+        let elOpt = session.findElement(selector, strategy)
+        if elOpt.isNone:
+          return jsonRpcError(id, -32602, "No element found for: " & selector)
+        result = contentResult(id, elOpt.get.visibleText())
 
     of "wd_accept_alert":
       let session = getSession(id, args)
@@ -560,6 +607,16 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       if opt.isSome:
         opt.get.sendKeys(text)
         result = contentResult(id, "keys sent")
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_css_property_value":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let name = args["name"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        result = contentResult(id, opt.get.cssPropertyValue(name))
       else:
         result = contentResult(id, "element not found")
 
