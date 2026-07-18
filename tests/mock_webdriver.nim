@@ -9,6 +9,8 @@
 ##   POST /session/<id>/url             -> {"value": null}
 ##   GET  /session/<id>/source          -> {"value": "<html>..."}
 ##   POST /session/<id>/element         -> {"value":{"element-...-cf": <eid>}}
+##   POST /session/<id>/alert/accept    -> {"value":null}
+##   POST /session/<id>/accept_alert    -> {"value":null}
 ##   GET  /session/<id>/element/<eid>/text -> {"value": "<text>"}
 
 import std/[net, os, strutils, typedthreads]
@@ -33,6 +35,8 @@ proc handle(meth, path: string): string =
       """{"value":{"element-6066-11e4-a52e-4f735466cecf":"""" & MOCK_ELEMENT_ID & """"}}"""
     elif path.endsWith("/text"):
       """{"value":"""" & MOCK_ELEMENT_TEXT & """"}"""
+    elif path.endsWith("/alert/accept") or path.endsWith("/accept_alert"):
+      """{"value":null}"""
     else:
       """{"value":null}"""
   "HTTP/1.1 200 OK\r\nContent-Length: " & $body.len &

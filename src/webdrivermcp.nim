@@ -86,6 +86,12 @@ proc defineTools(): seq[Tool] =
         [("session_id", "string", "Session id"),
          ("element_id", "string", "Element id returned by wd_find_element")],
         ["session_id", "element_id"])),
+    Tool(
+      name: "wd_accept_alert",
+      description: "Accept a JavaScript alert dialog in the current session",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -218,6 +224,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
         return jsonRpcError(id, -32602, "Unknown element_id: " & eid)
       let text = gElements[eid].visibleText()
       result = contentResult(id, text)
+
+    of "wd_accept_alert":
+      let session = getSession(id, args)
+      session.acceptAlert()
+      result = contentResult(id, "alert accepted")
 
     else:
       result = jsonRpcResult(id, %*{
