@@ -172,6 +172,12 @@ proc defineTools(): seq[Tool] =
       inputSchema: toolSchema(
         [("session_id", "string", "Session id")],
         ["session_id"])),
+    Tool(
+      name: "wd_width",
+      description: "Get the current window width in pixels",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id")],
+        ["session_id"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -381,6 +387,11 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       let t = session.title()
       result = contentResult(id, t)
+
+    of "wd_width":
+      let session = getSession(id, args)
+      let w = session.currentWindow().rect().width
+      result = contentResult(id, $w)
 
     else:
       result = jsonRpcResult(id, %*{

@@ -27,6 +27,7 @@ Feature: WebDriver MCP
     And the tools include wd_running
     And the tools include wd_status
     And the tools include wd_title
+    And the tools include wd_width
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -120,3 +121,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_title
     Then the page title is "Example Domain"
+
+  Scenario: Get the window width
+    Given an open webdriver session on "https://example.com"
+    When I call wd_width
+    Then the window width is "1024"
