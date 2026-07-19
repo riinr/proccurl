@@ -436,33 +436,46 @@ proc getStrategy(s: string): LocationStrategy =
   of "class_name", "class name": ClassNameSelector
   else: CssSelector
 
+proc tagName(el: Option[Element]): string =
+  if el.isNone: ""
+  else: el.get.tagName.toLower
+
 proc parent(el: Option[Element]): Option[Element] =
-  if el.isNone: el
-  else:         el.get.findElement("..", XPathSelector)
+  ## Returns the parent element, or none at the root/document node.
+  if el.isNone: return el
+  let root = el.get.findElement("/*", XPathSelector)
+  if el.tagName == root.tagName: return none(Element)
+  el.get.findElement("..", XPathSelector)
 
 proc prevSibling(el: Option[Element]): Option[Element] =
-  if el.isNone: el
-  else:         el.get.findElement("preceding-sibling::*[1]", XPathSelector)
+  if el.isNone: return el
+  let root = el.get.findElement("/*", XPathSelector)
+  if el.tagName == root.tagName: return none(Element)
+  el.get.findElement("preceding-sibling::*[1]", XPathSelector)
+
+proc cssSelectorOf(el: Element): string =
+  ## Compute a stable CSS selector for `el` using an in-page helper so we
+  var path: seq[string] = @[]
+  var cur = some(el)
+  while cur.isSome:
+    if cur.get.attribute("id") != "":
+      path.insert("#" & cur.get.attribute("id"))
+    else:
+      var nth = 1
+      var sib = cur.prevSibling
+      while sib.isSome:
+        if sib.tagName == cur.tagName: nth.inc
+        sib = sib.prevSibling
+      let sel = cur.tagName & (
+        if nth > 1: ":nth-of-type(" & $nth & ")"
+        else: "")
+      path.insert sel
+    cur = cur.parent
+  return path.join(" > ")
 
 converter toString(elementOpt: Option[Element]): string =
   if elementOpt.isNone: return ""
-  var path: seq[string] = @[]
-  var el = elementOpt
-  while el.isSome:
-    var selector = el.get.tagName.toLower
-    if el.get.id != "":
-      selector &= "#" & el.get.id
-    else:
-      var sibling = el.prevSibling
-      var nth = 1;
-      while sibling.isSome:
-        if sibling.get.tagName.toLower == selector:
-          nth.inc
-      if nth > 1 or el.prevSibling.isSome:
-        selector &= ":nth-of-type(" & $nth & ")"
-    path.insert selector
-    el = el.parent;
-  path.join(" > ")
+  result = cssSelectorOf(elementOpt.get)
 
 proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
   let toolName = params{"name"}.getStr("")
@@ -658,7 +671,14 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
     of "wd_active_element":
       let session = getSession(id, args)
       let elem = session.activeElement()
-      result = contentResult(id, some(elem).toString)
+      # activeElement() may resolve to the document/body node when nothing
+      # is focused. Compute a selector safely; if the node has no id and no
+      # parents (i.e. it is the root/document), report "body".
+      let sel = cssSelectorOf(elem)
+      if sel == "":
+        result = contentResult(id, "body")
+      else:
+        result = contentResult(id, sel)
 
     of "wd_attribute":
       let session = getSession(id, args)

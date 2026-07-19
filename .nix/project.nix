@@ -11,6 +11,7 @@
   files.gitignore.pattern."*\n!/**/\n!*.*"   = true;
   files.gitignore.pattern.".*"               = true;
   files.gitignore.pattern."nimble.path"      = true;
+  files.gitignore.pattern."htmldocs"         = true;
   files.gitignore.template."Global/Archives" = true;
   files.gitignore.template."Global/Backup"   = true;
   files.gitignore.template."Global/Diff"     = true;

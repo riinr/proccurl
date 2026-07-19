@@ -41,7 +41,7 @@
 ## (The library adds no timing line; the run exits non-zero when any scenario is
 ## `failed` or `failing`.)
 
-import std/[hashes, os, tables, exitprocs, strutils, macros]
+import std/[hashes, os, tables, strutils, macros]
 # Pull in `std/unittest` and re-export the *whole module* (not just selected
 # symbols). Re-exporting individual templates (`suite`/`test`) is not enough:
 # those templates call methods on unittest's internal `Formatter` type, and a
@@ -240,147 +240,151 @@ macro expandTests*(nameLit: untyped, body: untyped): untyped =
         `body`)
 
 
-proc printSummary() =
-  # When pepino is used only as a driver (e.g. via `pepinoMain`) there is no
-  # `suite`/`test` and `gCallFile` is never set; skip the scenario report so the
-  # driver output stays clean.
-  if gCallFile.len == 0:
-    return
-  # Drain gStatus into a local seq once. Under --mm:arc and --mm:orc, the
-  # Table[string, ...] pairs iterator may yield by sink / lent and iterating
-  # twice causes a SIGSEGV, and getOrDefault also misses entries. We snapshot
-  # the data (with proper copies) into a local seq and use that for everything.
-  var gStatusSeq: seq[(string, PepinoStatus)] = @[]
-  for k, v in gStatus:
-    gStatusSeq.add((k, v))
-  var passed, failed, undefined: int
-
-  # Derive the feature path fresh, at exit, from the surviving call-site file.
-  var pathStr = resolveFeaturePath(gCallFile)
-  # `instantiationInfo().filename` can report a path whose leading separator is
-  # missing; test files are always absolute, so restore it before normalizing.
-  if pathStr.len > 0 and pathStr[0] != '/':
-    pathStr = "/" & pathStr
-  # Report the path relative to the current working directory (typically the
-  # project root), e.g. `features/calc.feature` rather than an absolute path.
-  pathStr = relativePath(pathStr, getCurrentDir())
-  let hasPath = pathStr.len > 0 and pathStr.fileExists
-
-  # Re-parse the feature here, at exit, where string buffers are stable. The
-  # parser keeps some strings as views into the source text, so we use the
-  # resulting `Feature` only within this proc (never stored in a global, where
-  # its views would dangle by the time we print).
-  var feature = Feature()
-  if hasPath:
-    try:
-      feature = parseFeature(readFile(pathStr))
-    except GherkinError as e:
-      echo "pepino: failed to parse " & pathStr & ": " & e.msg
-
-  let featTitle = if feature.name.len > 0: feature.name
-                  else: "(no feature file)"
-
-  # Accumulate everything into ONE growing buffer via `add`. Using a single
-  # local buffer (rather than many `echo`/`&` calls on the globals) avoids the
-  # per-iteration string aliasing that corrupted the path earlier.
-  var outp = ""
-  outp.add("\n")
-  outp.add("Feature: ")
-  outp.add(featTitle)
-  outp.add("\n")
-  if hasPath:
-    outp.add("\n")
-
-  # Enumerate every checkable unit from the feature:
-  #   * a scenario with no `Examples` is one unit keyed by its name;
-  #   * a scenario that carries one or more `Examples` tables expands into one
-  #     unit per example row, keyed by "<name> [<k>]" (1-based across all of the
-  #     scenario's `Examples` tables). This covers both explicit `Scenario
-  #     Outline:` blocks and plain `Scenario:` blocks that happen to have rows.
-  # A `test "Multiply two numbers [1]":` then covers example row 1, and so on.
-  proc addUnits(scs: seq[Scenario]; units: var seq[(string, string)]) =
-    for s in scs:
-      if s.examples.len == 0:
-        # Plain scenario (or outline with no example rows): one unit by name.
-        units.add((s.name, s.name))
-      else:
-        # Scenario (Outline) with Examples: one unit per example row, keyed by
-        # "<name> [<k>]" (1-based across all of its `Examples` tables).
-        var k = 0
-        for ex in s.examples:
-          for row in ex.rows:
-            k.inc
-            let key = s.name & " [" & $k & "]"
-            units.add((key, key))
-
-  var units: seq[(string, string)] = @[]
-  addUnits(feature.scenarios, units)
-  for r in feature.rules:
-    addUnits(r.scenarios, units)
-
-  # Emit one scenario line per unit and tally its outcome. The three outcomes
-  # mirror Cucumber: a referenced unit whose test body passed, one whose test
-  # body failed, or one never referenced at all (failing).
-  #
-  # Lookup uses gStatusSeq (the local snapshot) to avoid Table[string, ...]
-  # iteration and getOrDefault issues under --mm:arc and --mm:orc.
-  for u in units:
-    var st = psUndefined
-    for i in 0..<gStatusSeq.len:
-      if gStatusSeq[i][0] == u[0]:
-        st = gStatusSeq[i][1]
-        break
-    case st
-    of psPassed:
-      inc passed
-      outp.add("  Scenario: "); outp.add(u[1])
-      if hasPath: outp.add(" # "); outp.add(pathStr)
-      outp.add("\n    passed\n\n")
-    of psFailed:
-      inc failed
-      outp.add("  Scenario: "); outp.add(u[1])
-      if hasPath: outp.add(" # "); outp.add(pathStr)
-      outp.add("\n    fail\n")
-      # Show *why* the scenario failed: the captured "Check failed: ..." lines
-      # for this scenario (keyed by its name), if any were recorded.
-      if gCaptor != nil and gCaptor.reasons.hasKey(u[0]):
-        for r in gCaptor.reasons[u[0]]:
-          outp.add("      ")
-          outp.add(r.replace("\n", "\n      "))
-          outp.add("\n")
-      outp.add("\n")
-    of psUndefined:
-      inc undefined
-      outp.add("  Scenario: "); outp.add(u[1])
-      if hasPath: outp.add(" # "); outp.add(pathStr)
-      outp.add("\n    failing\n\n")
-
-  # Summary footer -- Cucumber style.
-  var scenParts: seq[string] = @[]
-  if passed > 0: scenParts.add $passed & " passed"
-  if failed > 0: scenParts.add $failed & " failed"
-  if undefined > 0: scenParts.add $undefined & " failing"
-  let scenSummary = if scenParts.len == 0: "0"
-                    else: scenParts.join(", ")
-  let n = units.len
-  outp.add($n & " Scenarios (" & scenSummary & ")")
-  outp.add("\n")
-
-  echo outp
-
-  # A Cucumber run fails when any scenario is not green: a failed test body or a
-  # scenario with no matching test (undefined). `quit(1)` inside the exit proc
-  # overrides the process exit code accordingly. We also write the reason to
-  # stderr so the failure is visible even if a wrapper (e.g. `nim c -r` in some
-  # setups, or a CI step) swallows the numeric exit code.
-  if failed > 0 or undefined > 0:
-    var why: seq[string] = @[]
-    if failed > 0: why.add $failed & " failed"
-    if undefined > 0: why.add $undefined & " failing"
-    stderr.writeLine "pepino: " & why.join(", ") & " -- exiting with failure"
-    quit(1)
 
 when not isMainModule:
+  import std/exitprocs
+  proc printSummary() =
+    # When pepino is used only as a driver (e.g. via `pepinoMain`) there is no
+    # `suite`/`test` and `gCallFile` is never set; skip the scenario report so the
+    # driver output stays clean.
+    if gCallFile.len == 0:
+      return
+    # Drain gStatus into a local seq once. Under --mm:arc and --mm:orc, the
+    # Table[string, ...] pairs iterator may yield by sink / lent and iterating
+    # twice causes a SIGSEGV, and getOrDefault also misses entries. We snapshot
+    # the data (with proper copies) into a local seq and use that for everything.
+    var gStatusSeq: seq[(string, PepinoStatus)] = @[]
+    for k, v in gStatus:
+      gStatusSeq.add((k, v))
+    var passed, failed, undefined: int
+  
+    # Derive the feature path fresh, at exit, from the surviving call-site file.
+    var pathStr = resolveFeaturePath(gCallFile)
+    # `instantiationInfo().filename` can report a path whose leading separator is
+    # missing; test files are always absolute, so restore it before normalizing.
+    if pathStr.len > 0 and pathStr[0] != '/':
+      pathStr = "/" & pathStr
+    # Report the path relative to the current working directory (typically the
+    # project root), e.g. `features/calc.feature` rather than an absolute path.
+    pathStr = relativePath(pathStr, getCurrentDir())
+    let hasPath = pathStr.len > 0 and pathStr.fileExists
+  
+    # Re-parse the feature here, at exit, where string buffers are stable. The
+    # parser keeps some strings as views into the source text, so we use the
+    # resulting `Feature` only within this proc (never stored in a global, where
+    # its views would dangle by the time we print).
+    var feature = Feature()
+    if hasPath:
+      try:
+        feature = parseFeature(readFile(pathStr))
+      except GherkinError as e:
+        echo "pepino: failed to parse " & pathStr & ": " & e.msg
+  
+    let featTitle = if feature.name.len > 0: feature.name
+                    else: "(no feature file)"
+  
+    # Accumulate everything into ONE growing buffer via `add`. Using a single
+    # local buffer (rather than many `echo`/`&` calls on the globals) avoids the
+    # per-iteration string aliasing that corrupted the path earlier.
+    var outp = ""
+    outp.add("\n")
+    outp.add("Feature: ")
+    outp.add(featTitle)
+    outp.add("\n")
+    if hasPath:
+      outp.add("\n")
+  
+    # Enumerate every checkable unit from the feature:
+    #   * a scenario with no `Examples` is one unit keyed by its name;
+    #   * a scenario that carries one or more `Examples` tables expands into one
+    #     unit per example row, keyed by "<name> [<k>]" (1-based across all of the
+    #     scenario's `Examples` tables). This covers both explicit `Scenario
+    #     Outline:` blocks and plain `Scenario:` blocks that happen to have rows.
+    # A `test "Multiply two numbers [1]":` then covers example row 1, and so on.
+    proc addUnits(scs: seq[Scenario]; units: var seq[(string, string)]) =
+      for s in scs:
+        if s.examples.len == 0:
+          # Plain scenario (or outline with no example rows): one unit by name.
+          units.add((s.name, s.name))
+        else:
+          # Scenario (Outline) with Examples: one unit per example row, keyed by
+          # "<name> [<k>]" (1-based across all of its `Examples` tables).
+          var k = 0
+          for ex in s.examples:
+            for row in ex.rows:
+              k.inc
+              let key = s.name & " [" & $k & "]"
+              units.add((key, key))
+  
+    var units: seq[(string, string)] = @[]
+    addUnits(feature.scenarios, units)
+    for r in feature.rules:
+      addUnits(r.scenarios, units)
+  
+    # Emit one scenario line per unit and tally its outcome. The three outcomes
+    # mirror Cucumber: a referenced unit whose test body passed, one whose test
+    # body failed, or one never referenced at all (failing).
+    #
+    # Lookup uses gStatusSeq (the local snapshot) to avoid Table[string, ...]
+    # iteration and getOrDefault issues under --mm:arc and --mm:orc.
+    for u in units:
+      var st = psUndefined
+      for i in 0..<gStatusSeq.len:
+        if gStatusSeq[i][0] == u[0]:
+          st = gStatusSeq[i][1]
+          break
+      case st
+      of psPassed:
+        inc passed
+        outp.add("  Scenario: "); outp.add(u[1])
+        if hasPath: outp.add(" # "); outp.add(pathStr)
+        outp.add("\n    passed\n\n")
+      of psFailed:
+        inc failed
+        outp.add("  Scenario: "); outp.add(u[1])
+        if hasPath: outp.add(" # "); outp.add(pathStr)
+        outp.add("\n    fail\n")
+        # Show *why* the scenario failed: the captured "Check failed: ..." lines
+        # for this scenario (keyed by its name), if any were recorded.
+        if gCaptor != nil and gCaptor.reasons.hasKey(u[0]):
+          for r in gCaptor.reasons[u[0]]:
+            outp.add("      ")
+            outp.add(r.replace("\n", "\n      "))
+            outp.add("\n")
+        outp.add("\n")
+      of psUndefined:
+        inc undefined
+        outp.add("  Scenario: "); outp.add(u[1])
+        if hasPath: outp.add(" # "); outp.add(pathStr)
+        outp.add("\n    failing\n\n")
+  
+    # Summary footer -- Cucumber style.
+    var scenParts: seq[string] = @[]
+    if passed > 0: scenParts.add $passed & " passed"
+    if failed > 0: scenParts.add $failed & " failed"
+    if undefined > 0: scenParts.add $undefined & " failing"
+    let scenSummary = if scenParts.len == 0: "0"
+                      else: scenParts.join(", ")
+    let n = units.len
+    outp.add($n & " Scenarios (" & scenSummary & ")")
+    outp.add("\n")
+  
+    echo outp
+  
+    # A Cucumber run fails when any scenario is not green: a failed test body or a
+    # scenario with no matching test (undefined). `quit(1)` inside the exit proc
+    # overrides the process exit code accordingly. We also write the reason to
+    # stderr so the failure is visible even if a wrapper (e.g. `nim c -r` in some
+    # setups, or a CI step) swallows the numeric exit code.
+    if failed > 0 or undefined > 0:
+      var why: seq[string] = @[]
+      if failed > 0: why.add $failed & " failed"
+      if undefined > 0: why.add $undefined & " failing"
+      stderr.writeLine "pepino: " & why.join(", ") & " -- exiting with failure"
+      quit(1)
+
+
+
   addExitProc printSummary
 
 proc pepinoMain*(featuresDir = "features", testsDir = "tests",
