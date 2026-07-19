@@ -220,7 +220,7 @@ proc defineTools(): seq[Tool] =
         ["session_id", "css_selector"])),
     Tool(
       name: "wd_active_element",
-      description: "Get the visible text of the currently focused element",
+      description: "Get the selector the currently focused element",
       inputSchema: toolSchema(
         [("session_id", "string", "Session id")],
         ["session_id"])),
@@ -312,6 +312,13 @@ proc defineTools(): seq[Tool] =
     Tool(
       name: "wd_submit",
       description: "Submit the form containing the first element matching the CSS selector",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element")],
+        ["session_id", "css_selector"])),
+    Tool(
+      name: "wd_tag_name",
+      description: "Get the tag name of the first element matching the CSS selector",
       inputSchema: toolSchema(
         [("session_id", "string", "Session id"),
          ("css_selector", "string", "CSS selector to find the element")],
@@ -751,6 +758,15 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       if opt.isSome:
         opt.get.submit()
         result = contentResult(id, "element submitted")
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_tag_name":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        result = contentResult(id, opt.get.tagName())
       else:
         result = contentResult(id, "element not found")
 

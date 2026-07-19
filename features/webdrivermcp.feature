@@ -46,6 +46,7 @@ Feature: WebDriver MCP
     And the tools include wd_displayed
     And the tools include wd_selected
     And the tools include wd_submit
+    And the tools include wd_tag_name
     And the tools include wd_height
     And the tools include wd_location
 
@@ -246,6 +247,11 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_submit with css_selector "input"
     Then the element is submitted
+
+  Scenario: Get the tag name of an element
+    Given an open webdriver session on "https://example.com"
+    When I call wd_tag_name with css_selector "input"
+    Then the tag name includes "h1"
 
   Scenario: Get the height of an element
     Given an open webdriver session on "https://example.com"
