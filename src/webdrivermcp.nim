@@ -204,6 +204,14 @@ proc defineTools(): seq[Tool] =
          ("css_selector", "string", "CSS selector to find the element")],
         ["session_id", "css_selector"])),
     Tool(
+      name: "wd_save_screen_shot_to",
+      description: "Take a screenshot of the first element matching the CSS selector and save it to a file",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element"),
+         ("filename", "string", "Path where the PNG screenshot will be written")],
+        ["session_id", "css_selector", "filename"])),
+    Tool(
       name: "wd_visible_text",
       description: "Get the visible text of the first element matching the CSS selector",
       inputSchema: toolSchema(
@@ -573,6 +581,18 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       if opt.isSome:
         let r = opt.get.rect()
         result = contentResult(id, "x=" & $r.x & ", y=" & $r.y & ", width=" & $r.width & ", height=" & $r.height)
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_save_screen_shot_to":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let filename = args["filename"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        let png = opt.get.takeScreenshotPng()
+        filename.writeFile(png)
+        result = contentResult(id, "screenshot saved to " & filename)
       else:
         result = contentResult(id, "element not found")
 

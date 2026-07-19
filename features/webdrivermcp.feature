@@ -31,6 +31,7 @@ Feature: WebDriver MCP
     And the tools include wd_y
     And the tools include wd_rect
     And the tools include wd_element_rect
+    And the tools include wd_save_screen_shot_to
     And the tools include wd_visible_text
     And the tools include wd_active_element
     And the tools include wd_attribute
@@ -158,6 +159,11 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_element_rect with css_selector "button"
     Then the element rect includes "x=0.0, y=0.0, width=200.0, height=100.0"
+
+  Scenario: Save a screenshot of an element to a file
+    Given an open webdriver session on "https://example.com"
+    When I call wd_save_screen_shot_to with css_selector "button" and filename "element.png"
+    Then the screenshot is saved to "element.png"
 
   Scenario: Get visible text of an element
     Given an open webdriver session on "https://example.com"
