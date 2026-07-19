@@ -144,6 +144,7 @@ suite "webdrivermcp scenarios":
     check "wd_css_property_value" in names
     check "wd_enabled" in names
     check "wd_displayed" in names
+    check "wd_height" in names
 
   test "Create a webdriver and a session":
     let srv = startServer()
@@ -461,3 +462,12 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_displayed", %*{"session_id": sid, "css_selector": "button"})
     check "true" in getText(r, "text")
+
+  test "Get the height of an element":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_height", %*{"session_id": sid, "css_selector": "button"})
+    check "100.0" in getText(r, "text")

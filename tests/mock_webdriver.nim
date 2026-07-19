@@ -52,7 +52,11 @@ proc handle(meth, path: string): tuple[status, body: string] =
     elif path.endsWith("/title"):
       """{"value":"""" & MOCK_PAGE_TITLE & """"}"""
     elif path.endsWith("/rect"):
-      """{"value":{"x":0,"y":0,"width":1024,"height":768}}"""
+      if "/element/" in path:
+        # element rect -> GET /session/<id>/element/<eid>/rect
+        """{"value":{"x":0,"y":0,"width":200,"height":100}}"""
+      else:
+        """{"value":{"x":0,"y":0,"width":1024,"height":768}}"""
     elif path.endsWith("/element/active"):
       """{"value":{"element-6066-11e4-a52e-4f735466cecf":"""" & MOCK_ELEMENT_ID & """"}}"""
     elif path.endsWith("/element") and "/element/" in path:
