@@ -4,7 +4,6 @@
 !*.*
 .*
 /.vix/
-codegraph.json
 htmldocs
 nimble.path
 opencode.json

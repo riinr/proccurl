@@ -19,22 +19,6 @@ in
     ];
     mcp_servers = [
       {
-        name    = "context7";
-        command = "context7-mcp";
-        env     = {
-          CONTEXT7_API_KEY = "\${env:CONTEXT7_API_KEY}";
-        };
-      }
-      {
-        name    = "hydradb";                            
-        command = "npx";                                
-        args    = [ "-y" "@hydradb/mcp@latest" ];
-        env     = {                                     
-          HYDRA_DB_API_KEY = "\${env:HYDRA_DB_API_KEY}";
-          HYDRA_DB_TENANT_ID = "hugosenari";
-        };
-      }
-      {
         name    = "mcpcurl";
         command = "/home/hugosenari/Code/proccurl/bin/mcpcurl";
       }
@@ -50,20 +34,6 @@ in
         name    = "nimlang";
         command = "nimlangserver";
         args    = [ "--mcp" ];
-      }
-      {
-        name    = "codegraph";
-        command = "codegraph";
-        args    = ["serve" "--mcp"];
-      }
-      {
-        name = "composio";
-        type = "url";
-        #url  = "https://connect.composio.dev/mcp";
-        url  = "http://0.0.0.0:5000/mcp";
-        headers = {
-          Authorization = "Bearer \${COMPOSIO_API_KEY}";
-        };
       }
     ];
     workflows = [];
