@@ -95,6 +95,8 @@ proc handle(meth, path: string): tuple[status, body: string] =
       """{"value":"""" & MOCK_ELEMENT_TEXT & """"}"""
     elif "/attribute/" in path:
       """{"value":"mock-attribute-value"}"""
+    elif "/property/" in path:
+      """{"value":"mock-property-value"}"""
     elif "/css/" in path:
       """{"value":"mock-css-value"}"""
     elif path.endsWith("/enabled"):

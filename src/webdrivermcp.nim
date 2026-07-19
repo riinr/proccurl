@@ -266,6 +266,14 @@ proc defineTools(): seq[Tool] =
          ("name", "string", "CSS property name (e.g. 'color', 'background-color')")],
         ["session_id", "css_selector", "name"])),
     Tool(
+      name: "wd_property",
+      description: "Get the value of a JS/DOM property on the first element matching the CSS selector",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element"),
+         ("name", "string", "Property name (e.g. 'value', 'checked', 'nodeName')")],
+        ["session_id", "css_selector", "name"])),
+    Tool(
       name: "wd_enabled",
       description: "Check whether the first element matching the CSS selector is enabled",
       inputSchema: toolSchema(
@@ -645,6 +653,16 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let opt = session.findElement(css)
       if opt.isSome:
         result = contentResult(id, opt.get.cssPropertyValue(name))
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_property":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let name = args["name"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        result = contentResult(id, opt.get.property(name))
       else:
         result = contentResult(id, "element not found")
 

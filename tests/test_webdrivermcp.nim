@@ -142,6 +142,7 @@ suite "webdrivermcp scenarios":
     check "wd_drag_and_drop" in names
     check "wd_send_keys" in names
     check "wd_css_property_value" in names
+    check "wd_property" in names
     check "wd_enabled" in names
     check "wd_displayed" in names
     check "wd_height" in names
@@ -445,6 +446,15 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_css_property_value", %*{"session_id": sid, "css_selector": "h1", "name": "color"})
     check "mock-css-value" in getText(r, "text")
+
+  test "Get an element property value":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_property", %*{"session_id": sid, "css_selector": "input", "name": "value"})
+    check "mock-property-value" in getText(r, "text")
 
   test "Check whether an element is enabled":
     let srv = startServer()

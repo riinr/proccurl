@@ -39,6 +39,7 @@ Feature: WebDriver MCP
     And the tools include wd_drag_and_drop
     And the tools include wd_send_keys
     And the tools include wd_css_property_value
+    And the tools include wd_property
     And the tools include wd_enabled
     And the tools include wd_displayed
     And the tools include wd_height
@@ -206,6 +207,11 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_css_property_value with css_selector "h1" and name "color"
     Then the css value is "mock-css-value"
+
+  Scenario: Get an element property value
+    Given an open webdriver session on "https://example.com"
+    When I call wd_property with css_selector "input" and name "value"
+    Then the property value is "mock-property-value"
 
   Scenario: Check whether an element is enabled
     Given an open webdriver session on "https://example.com"
