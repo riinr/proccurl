@@ -310,6 +310,13 @@ proc defineTools(): seq[Tool] =
          ("css_selector", "string", "CSS selector to find the element")],
         ["session_id", "css_selector"])),
     Tool(
+      name: "wd_submit",
+      description: "Submit the form containing the first element matching the CSS selector",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element")],
+        ["session_id", "css_selector"])),
+    Tool(
       name: "wd_height",
       description: "Get the height in pixels of the first element matching the CSS selector",
       inputSchema: toolSchema(
@@ -734,6 +741,16 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let opt = session.findElement(css)
       if opt.isSome:
         result = contentResult(id, $opt.get.selected())
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_submit":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        opt.get.submit()
+        result = contentResult(id, "element submitted")
       else:
         result = contentResult(id, "element not found")
 

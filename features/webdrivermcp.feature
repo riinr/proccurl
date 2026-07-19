@@ -45,6 +45,7 @@ Feature: WebDriver MCP
     And the tools include wd_enabled
     And the tools include wd_displayed
     And the tools include wd_selected
+    And the tools include wd_submit
     And the tools include wd_height
     And the tools include wd_location
 
@@ -240,6 +241,11 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_selected with css_selector "input"
     Then the element is selected "true"
+
+  Scenario: Submit a form containing an element
+    Given an open webdriver session on "https://example.com"
+    When I call wd_submit with css_selector "input"
+    Then the element is submitted
 
   Scenario: Get the height of an element
     Given an open webdriver session on "https://example.com"

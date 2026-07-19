@@ -109,6 +109,12 @@ proc handle(meth, path: string): tuple[status, body: string] =
       """{"value":true}"""
     elif path.endsWith("/displayed"):
       """{"value":true}"""
+    elif path.endsWith("/submit"):
+      # element submit (non-w3c) -> POST /session/<id>/element/<eid>/submit
+      """{"value":null}"""
+    elif path.endsWith("/execute/sync") or path.endsWith("/execute/async"):
+      # executeScript used by the w3c submit() path
+      """{"value":null}"""
     elif path.endsWith("/alert/accept") or path.endsWith("/accept_alert"):
       """{"value":null}"""
     elif path.endsWith("/cookie"):
