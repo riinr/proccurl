@@ -112,6 +112,12 @@ proc handle(meth, path: string): tuple[status, body: string] =
     elif path.endsWith("/submit"):
       # element submit (non-w3c) -> POST /session/<id>/element/<eid>/submit
       """{"value":null}"""
+    elif path.endsWith("/value"):
+      # sendKeys (used by uploadFile) -> POST /session/<id>/element/<eid>/value
+      """{"value":null}"""
+    elif path.endsWith("/file"):
+      # uploadFile -> POST /session/<id>/file
+      """{"value":"/tmp/uploaded-file"}"""
     elif path.endsWith("/execute/sync") or path.endsWith("/execute/async"):
       # executeScript used by the w3c submit() path
       """{"value":null}"""

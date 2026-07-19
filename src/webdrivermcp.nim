@@ -338,6 +338,14 @@ proc defineTools(): seq[Tool] =
          ("css_selector", "string", "CSS selector to find the element")],
         ["session_id", "css_selector"])),
     Tool(
+      name: "wd_upload_file",
+      description: "Upload a local file to the first file input element matching the CSS selector",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element"),
+         ("filename", "string", "Path of the local file to upload")],
+        ["session_id", "css_selector", "filename"])),
+    Tool(
       name: "wd_height",
       description: "Get the height in pixels of the first element matching the CSS selector",
       inputSchema: toolSchema(
@@ -799,6 +807,17 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let opt = session.findElement(css)
       if opt.isSome:
         result = contentResult(id, opt.get.text())
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_upload_file":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let filename = args["filename"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        opt.get.uploadFile(filename)
+        result = contentResult(id, "file uploaded to " & filename)
       else:
         result = contentResult(id, "element not found")
 

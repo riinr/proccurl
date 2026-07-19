@@ -49,6 +49,7 @@ Feature: WebDriver MCP
     And the tools include wd_tag_name
     And the tools include wd_take_screen_shot_base64
     And the tools include wd_text
+    And the tools include wd_upload_file
     And the tools include wd_height
     And the tools include wd_location
 
@@ -264,6 +265,11 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_text with css_selector "h1"
     Then the element text includes "mock-property-value"
+
+  Scenario: Upload a file to a file input element
+    Given an open webdriver session on "https://example.com"
+    When I call wd_upload_file with css_selector "input" and filename "test-upload.txt"
+    Then the file is uploaded to "test-upload.txt"
 
   Scenario: Get the height of an element
     Given an open webdriver session on "https://example.com"
