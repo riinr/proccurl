@@ -48,6 +48,7 @@ Feature: WebDriver MCP
     And the tools include wd_submit
     And the tools include wd_tag_name
     And the tools include wd_take_screen_shot_base64
+    And the tools include wd_text
     And the tools include wd_height
     And the tools include wd_location
 
@@ -258,6 +259,11 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_take_screen_shot_base64 with css_selector "button"
     Then the screenshot base64 includes "iVBORw0KGgo"
+
+  Scenario: Get the visible text of an element
+    Given an open webdriver session on "https://example.com"
+    When I call wd_text with css_selector "h1"
+    Then the element text includes "mock-property-value"
 
   Scenario: Get the height of an element
     Given an open webdriver session on "https://example.com"

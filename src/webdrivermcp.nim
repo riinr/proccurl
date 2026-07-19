@@ -331,6 +331,13 @@ proc defineTools(): seq[Tool] =
          ("css_selector", "string", "CSS selector to find the element")],
         ["session_id", "css_selector"])),
     Tool(
+      name: "wd_text",
+      description: "Get the visible text of the first element matching the CSS selector",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element")],
+        ["session_id", "css_selector"])),
+    Tool(
       name: "wd_height",
       description: "Get the height in pixels of the first element matching the CSS selector",
       inputSchema: toolSchema(
@@ -783,6 +790,15 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let opt = session.findElement(css)
       if opt.isSome:
         result = contentResult(id, opt.get.takeScreenshotBase64())
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_text":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        result = contentResult(id, opt.get.text())
       else:
         result = contentResult(id, "element not found")
 
