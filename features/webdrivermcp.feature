@@ -39,6 +39,8 @@ Feature: WebDriver MCP
     And the tools include wd_drag_and_drop
     And the tools include wd_send_keys
     And the tools include wd_css_property_value
+    And the tools include wd_enabled
+    And the tools include wd_displayed
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -202,3 +204,13 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_css_property_value with css_selector "h1" and name "color"
     Then the css value is "mock-css-value"
+
+  Scenario: Check whether an element is enabled
+    Given an open webdriver session on "https://example.com"
+    When I call wd_enabled with css_selector "button"
+    Then the element is enabled "true"
+
+  Scenario: Check whether an element is displayed
+    Given an open webdriver session on "https://example.com"
+    When I call wd_displayed with css_selector "button"
+    Then the element is displayed "true"

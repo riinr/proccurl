@@ -265,6 +265,20 @@ proc defineTools(): seq[Tool] =
          ("css_selector", "string", "CSS selector to find the element"),
          ("name", "string", "CSS property name (e.g. 'color', 'background-color')")],
         ["session_id", "css_selector", "name"])),
+    Tool(
+      name: "wd_enabled",
+      description: "Check whether the first element matching the CSS selector is enabled",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element")],
+        ["session_id", "css_selector"])),
+    Tool(
+      name: "wd_displayed",
+      description: "Check whether the first element matching the CSS selector is displayed",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element")],
+        ["session_id", "css_selector"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -617,6 +631,24 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let opt = session.findElement(css)
       if opt.isSome:
         result = contentResult(id, opt.get.cssPropertyValue(name))
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_enabled":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        result = contentResult(id, $opt.get.enabled())
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_displayed":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        result = contentResult(id, $opt.get.displayed())
       else:
         result = contentResult(id, "element not found")
 

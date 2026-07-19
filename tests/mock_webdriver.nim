@@ -93,6 +93,10 @@ proc handle(meth, path: string): tuple[status, body: string] =
       """{"value":"mock-attribute-value"}"""
     elif "/css/" in path:
       """{"value":"mock-css-value"}"""
+    elif path.endsWith("/enabled"):
+      """{"value":true}"""
+    elif path.endsWith("/displayed"):
+      """{"value":true}"""
     elif path.endsWith("/alert/accept") or path.endsWith("/accept_alert"):
       """{"value":null}"""
     elif path.endsWith("/cookie"):
