@@ -286,6 +286,13 @@ proc defineTools(): seq[Tool] =
         [("session_id", "string", "Session id"),
          ("css_selector", "string", "CSS selector to find the element")],
         ["session_id", "css_selector"])),
+    Tool(
+      name: "wd_location",
+      description: "Get the x, y location of the first element matching the CSS selector",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element")],
+        ["session_id", "css_selector"])),
   ]
 
 proc jsonRpcError(id: JsonNode; code: int; message: string): JsonNode =
@@ -665,6 +672,16 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let opt = session.findElement(css)
       if opt.isSome:
         result = contentResult(id, $opt.get.height())
+      else:
+        result = contentResult(id, "element not found")
+
+    of "wd_location":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        let r = opt.get.rect()
+        result = contentResult(id, "x=" & $r.x & ", y=" & $r.y)
       else:
         result = contentResult(id, "element not found")
 

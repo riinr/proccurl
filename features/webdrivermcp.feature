@@ -42,6 +42,7 @@ Feature: WebDriver MCP
     And the tools include wd_enabled
     And the tools include wd_displayed
     And the tools include wd_height
+    And the tools include wd_location
 
   Scenario: Create a webdriver and a session
     Given a webdrivermcp server
@@ -220,3 +221,8 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_height with css_selector "button"
     Then the element height is "100.0"
+
+  Scenario: Get the location of an element
+    Given an open webdriver session on "https://example.com"
+    When I call wd_location with css_selector "button"
+    Then the element location includes "x=0.0, y=0.0"
