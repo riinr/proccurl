@@ -17,21 +17,15 @@
   # install a packages
   packages = [
     pkgs.curlFull.out
+    pkgs.zlib
     pkgs.nim
     pkgs.nimble
     pkgs.nimlangserver
     pkgs.binutils
-    pkgs.vscodium
-    pkgs.opencode
-    pkgs.nodejs
     pkgs.ripgrep
     pkgs.gcc
     pkgs.context7-mcp
-    pkgs.nsync
-    pkgs.cosmopolitan
-    pkgs.perf
     pkgs.geckodriver
-    pkgs.pandoc
   ];
 
   # configure direnv .envrc file
@@ -104,6 +98,8 @@
 
   env = [
     { name = "LD_LIBRARY_PATH"; prefix = "${pkgs.curlFull.out}/lib:${pkgs.cosmopolitan}/lib";}
+    { name = "LDFLAGS";         prefix = "-L${pkgs.zlib}/lib";}
+    { name = "NIX_LDFLAGS";     value = "-L${pkgs.zlib}/lib";}
     #{ name = "PKG_CONFIG_PATH"; prefix = "${pkgs.mimalloc.dev}/lib/pkgconfig";}
     { name = "COSMO_PATH";      prefix = "${pkgs.cosmocc}";}
   ];
