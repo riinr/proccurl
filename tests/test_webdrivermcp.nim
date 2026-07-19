@@ -133,6 +133,7 @@ suite "webdrivermcp scenarios":
     check "wd_width" in names
     check "wd_y" in names
     check "wd_rect" in names
+    check "wd_element_rect" in names
     check "wd_visible_text" in names
     check "wd_active_element" in names
     check "wd_attribute" in names
@@ -347,6 +348,15 @@ suite "webdrivermcp scenarios":
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_rect", %*{"session_id": sid})
     check "x=0.0, y=0.0, width=1024.0, height=768.0" in getText(r, "text")
+
+  test "Get the rect of an element":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_element_rect", %*{"session_id": sid, "css_selector": "button"})
+    check "x=0.0, y=0.0, width=200.0, height=100.0" in getText(r, "text")
 
   test "Get visible text of an element":
     let srv = startServer()

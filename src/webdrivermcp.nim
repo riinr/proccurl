@@ -197,6 +197,13 @@ proc defineTools(): seq[Tool] =
         [("session_id", "string", "Session id")],
         ["session_id"])),
     Tool(
+      name: "wd_element_rect",
+      description: "Get the rect (x, y, width, height) of the first element matching the CSS selector",
+      inputSchema: toolSchema(
+        [("session_id", "string", "Session id"),
+         ("css_selector", "string", "CSS selector to find the element")],
+        ["session_id", "css_selector"])),
+    Tool(
       name: "wd_visible_text",
       description: "Get the visible text of the first element matching the CSS selector",
       inputSchema: toolSchema(
@@ -558,6 +565,16 @@ proc handleToolsCall(id: JsonNode; params: JsonNode): JsonNode =
       let session = getSession(id, args)
       let r = session.currentWindow().rect()
       result = contentResult(id, "x=" & $r.x & ", y=" & $r.y & ", width=" & $r.width & ", height=" & $r.height)
+
+    of "wd_element_rect":
+      let session = getSession(id, args)
+      let css = args["css_selector"].getStr()
+      let opt = session.findElement(css)
+      if opt.isSome:
+        let r = opt.get.rect()
+        result = contentResult(id, "x=" & $r.x & ", y=" & $r.y & ", width=" & $r.width & ", height=" & $r.height)
+      else:
+        result = contentResult(id, "element not found")
 
     of "wd_visible_text":
       let session = getSession(id, args)

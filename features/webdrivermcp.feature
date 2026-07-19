@@ -30,6 +30,7 @@ Feature: WebDriver MCP
     And the tools include wd_width
     And the tools include wd_y
     And the tools include wd_rect
+    And the tools include wd_element_rect
     And the tools include wd_visible_text
     And the tools include wd_active_element
     And the tools include wd_attribute
@@ -152,6 +153,11 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_rect
     Then the window rect includes "x=0.0, y=0.0, width=1024.0, height=768.0"
+
+  Scenario: Get the rect of an element
+    Given an open webdriver session on "https://example.com"
+    When I call wd_element_rect with css_selector "button"
+    Then the element rect includes "x=0.0, y=0.0, width=200.0, height=100.0"
 
   Scenario: Get visible text of an element
     Given an open webdriver session on "https://example.com"
