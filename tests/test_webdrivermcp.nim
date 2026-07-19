@@ -147,6 +147,7 @@ suite "webdrivermcp scenarios":
     check "wd_property" in names
     check "wd_enabled" in names
     check "wd_displayed" in names
+    check "wd_selected" in names
     check "wd_height" in names
     check "wd_location" in names
 
@@ -496,6 +497,15 @@ suite "webdrivermcp scenarios":
     discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
     let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
     let r = srv.mcpCall(3, "wd_displayed", %*{"session_id": sid, "css_selector": "button"})
+    check "true" in getText(r, "text")
+
+  test "Check whether an element is selected":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_selected", %*{"session_id": sid, "css_selector": "input"})
     check "true" in getText(r, "text")
 
   test "Get the height of an element":

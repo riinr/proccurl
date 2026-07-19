@@ -44,6 +44,7 @@ Feature: WebDriver MCP
     And the tools include wd_property
     And the tools include wd_enabled
     And the tools include wd_displayed
+    And the tools include wd_selected
     And the tools include wd_height
     And the tools include wd_location
 
@@ -234,6 +235,11 @@ Feature: WebDriver MCP
     Given an open webdriver session on "https://example.com"
     When I call wd_displayed with css_selector "button"
     Then the element is displayed "true"
+
+  Scenario: Check whether an element is selected
+    Given an open webdriver session on "https://example.com"
+    When I call wd_selected with css_selector "input"
+    Then the element is selected "true"
 
   Scenario: Get the height of an element
     Given an open webdriver session on "https://example.com"

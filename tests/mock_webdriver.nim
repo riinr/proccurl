@@ -96,6 +96,9 @@ proc handle(meth, path: string): tuple[status, body: string] =
     elif "/element/" in path and path.endsWith("/screenshot"):
       # element screenshot -> POST /session/<id>/element/<eid>/screenshot
       """{"value":"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMCAQDJ/3pUAAAAAElFTkSuQmCC"}"""
+    elif "/element/" in path and path.endsWith("/selected"):
+      # element selected -> GET /session/<id>/element/<eid>/selected
+      """{"value":true}"""
     elif "/attribute/" in path:
       """{"value":"mock-attribute-value"}"""
     elif "/property/" in path:
