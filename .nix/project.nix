@@ -7,12 +7,13 @@
   files.gitignore.enable = true;
   # copy contents from https://github.com/github/gitignore
   # to our .gitignore
+  files.gitignore.pattern."!.nix/*"          = true;
+  files.gitignore.pattern."*\n!/**/\n!*.*"   = true;
+  files.gitignore.pattern.".*"               = true;
+  files.gitignore.pattern."nimble.path"      = true;
   files.gitignore.template."Global/Archives" = true;
   files.gitignore.template."Global/Backup"   = true;
   files.gitignore.template."Global/Diff"     = true;
-  files.gitignore.pattern."*\n!/**/\n!*.*"   = true;
-  files.gitignore.pattern.".*"               = true;
-  files.gitignore.pattern."!.nix/*"          = true;
 
   # install a packages
   packages = [
@@ -42,13 +43,15 @@
 
   files.alias.docs = ''
     # Compiles all docs
-    find $PRJ_ROOT/src/proccurl/ -maxdepth 1 -name '*.nim' \
+    find $PRJ_ROOT/packages/*/src/ \
+     -maxdepth 1 \
+     -name '*.nim' \
      -execdir nim doc {} \;
   '';
 
   files.alias.benchc = ''
     # Compiles all benchmarks
-    find $PRJ_ROOT/bench -maxdepth 1 -name '*.nim' \
+    find $PRJ_ROOT/packages/proccurl/bench -maxdepth 1 -name '*.nim' \
      -execdir nim c \
        --mm:arc \
        --passC:"-march=native" \
@@ -62,7 +65,7 @@
 
   files.alias.benchr = ''
     # Run all benchmarks
-    for i in $(find $PRJ_ROOT/bench -maxdepth 1 -type f -executable); do
+    for i in $(find $PRJ_ROOT/packages/proccurl/bench -maxdepth 1 -type f -executable); do
       echo $i
       $i
     done
@@ -71,7 +74,7 @@
   files.alias.ipcs = ''
     # Compile and RUN IPC main command as Server
     rm -rf /tmp/ipc-*.mmap
-    nim c -o:/tmp/proccurl-ipc-main $PRJ_ROOT/src/proccurl/ipc.nim && \
+    nim c -o:/tmp/proccurl-ipc-main $PRJ_ROOT/packages/proccurl/src/proccurl/ipc.nim && \
       /tmp/proccurl-ipc-main 08x32 08x32
   '';
 
@@ -82,18 +85,10 @@
 
   files.alias.build = ''
     # BUILD all binaries
-    nim c --threads:on -o:bin/proccurl src/proccurl.nim
-    nim c --threads:on -o:bin/mcpcurl src/mcpcurl.nim
-  '';
-
-  files.alias.build-mcpcurl = ''
-    # BUILD mcpcurl only
-    nim c --threads:on -o:bin/mcpcurl src/mcpcurl.nim
-  '';
-
-  files.alias.build-proccurl = ''
-    # BUILD proccurl only
-    nim c --threads:on -o:bin/proccurl src/proccurl.nim
+    nim c --threads:on -o:bin/proccurl        packages/proccurl/src/proccurl.nim
+    nim c --threads:on -o:bin/mcpcurl         packages/mcpcurl/src/mcpcurl.nim
+    nim c --threads:on -o:bin/webdrivermcp    packages/webdrivermcp/src/webdrivermcp.nim
+    nim c --threads:on -o:bin/pepino          packages/pepino/src/pepino.nim
   '';
 
   env = [

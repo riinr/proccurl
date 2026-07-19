@@ -54,7 +54,7 @@ let
   };
 in
 {
-  files.json."/PROTOCOLS/STDIO-v1_JSONL-v1_JSON-RPC-v2_OPEN-RPC-v1.json" = {
+  files.json."/packages/proccurl/PROTOCOLS/STDIO-v1_JSONL-v1_JSON-RPC-v2_OPEN-RPC-v1.json" = {
     id = 1;
     jsonrpc = "2.0";
     result.openrpc = "1.2.1";

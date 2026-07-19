@@ -4,7 +4,7 @@ An MCP (Model Context Protocol) server that wraps libcurl to provide HTTP reques
 
 ## Usage
 
-Built from `src/mcpcurl.nim`, the `mcpcurl` binary is a stdio-based MCP server. Register it as an MCP client tool:
+Built from `packages/mcpcurl/src/mcpcurl.nim`, the `mcpcurl` binary is a stdio-based MCP server. Register it as an MCP client tool:
 
 ```json
 {
@@ -88,7 +88,7 @@ The `body` field attempts JSON parsing; if it fails, the raw string is returned.
 
 ## Nim client library
 
-`src/mcpcurl/mcpcurlclient.nim` provides a native Nim client that spawns the `mcpcurl` binary and communicates over stdio.
+`packages/mcpcurl/src/mcpcurl/mcpcurlclient.nim` provides a native Nim client that spawns the `mcpcurl` binary and communicates over stdio.
 
 ### Usage
 
