@@ -153,6 +153,7 @@ suite "webdrivermcp scenarios":
     check "wd_take_screen_shot_base64" in names
     check "wd_text" in names
     check "wd_upload_file" in names
+    check "wd_value" in names
     check "wd_height" in names
     check "wd_location" in names
 
@@ -561,6 +562,15 @@ suite "webdrivermcp scenarios":
     let r = srv.mcpCall(3, "wd_upload_file",
       %*{"session_id": sid, "css_selector": "input", "filename": fn})
     check "file uploaded to " & fn in getText(r, "text")
+
+  test "Get the value of an element":
+    let srv = startServer()
+    defer: srv.close()
+    let url = "http://127.0.0.1:" & $gMockPort
+    discard srv.mcpCall(1, "wd_new_web_driver", %*{"url": url})
+    let sid = getText(srv.mcpCall(2, "wd_create_session", %*{}), "text")
+    let r = srv.mcpCall(3, "wd_value", %*{"session_id": sid, "css_selector": "input"})
+    check "mock-value" in getText(r, "text")
 
   test "Get the height of an element":
     let srv = startServer()

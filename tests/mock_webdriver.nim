@@ -113,8 +113,9 @@ proc handle(meth, path: string): tuple[status, body: string] =
       # element submit (non-w3c) -> POST /session/<id>/element/<eid>/submit
       """{"value":null}"""
     elif path.endsWith("/value"):
-      # sendKeys (used by uploadFile) -> POST /session/<id>/element/<eid>/value
-      """{"value":null}"""
+      # GET: value() -> /session/<id>/element/<eid>/value
+      # POST: sendKeys (used by uploadFile) -> same path
+      """{"value":"mock-value"}"""
     elif path.endsWith("/file"):
       # uploadFile -> POST /session/<id>/file
       """{"value":"/tmp/uploaded-file"}"""
