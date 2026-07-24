@@ -65,23 +65,23 @@ in
       }
       {
         id           = "google";
-	display_name = "Google";
-	model_prefix = "google";
-	wire_format  = "chat_completions";
-	inference.base_url = "https://generativelanguage.googleapis.com/v1beta/interactions";
-	inference.auth_scheme = "x-api-key";
-	inference.auth_header = "x-goog-api-key";
-	credential_methods = [{ kind = "api_key"; env_var = "GEMINI___API_KEY"; keyring = "opencode-api-key";  }];
+        display_name = "Google";
+        model_prefix = "google";
+        wire_format  = "chat_completions";
+        inference.base_url = "https://generativelanguage.googleapis.com/v1beta/interactions";
+        inference.auth_scheme = "x-api-key";
+        inference.auth_header = "x-goog-api-key";
+        credential_methods = [{ kind = "api_key"; env_var = "GEMINI___API_KEY"; keyring = "opencode-api-key";  }];
         models = [{ spec = "gemini-3.5-flash"; display_name = "Gemini3"; context_window = 200000; }];
       }
       {
         id           = "llmgateway";
-	display_name = "LLMGateway";
-	model_prefix = "llmgatewsay";
-	wire_format  = "messages";
-	inference.base_url    = "https://api.llmgateway.io/v1";
-	inference.auth_scheme = "bearer";
-	credential_methods = [{ kind = "api_key"; env_var = "LLMGTWAY_API_KEY"; keyring = "opencode-api-key";  }];
+        display_name = "LLMGateway";
+        model_prefix = "llmgatewsay";
+        wire_format  = "messages";
+        inference.base_url    = "https://api.llmgateway.io/v1";
+        inference.auth_scheme = "bearer";
+        credential_methods = [{ kind = "api_key"; env_var = "LLMGTWAY_API_KEY"; keyring = "opencode-api-key";  }];
         models = [{ spec = "anthropic/claude-haiku-4-5-free"; display_name = "Haiku"; context_window = 200000; }];
       }
       {
