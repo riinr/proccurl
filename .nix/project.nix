@@ -1,4 +1,4 @@
-{ pkgs, inputs, ...}:
+{ pkgs, lib, inputs, ...}:
 {
   # Name your shell environment
   devshell.name = "proccurl";
@@ -26,8 +26,11 @@
     pkgs.binutils
     pkgs.ripgrep
     pkgs.gcc
+    pkgs.openssl
     pkgs.context7-mcp
     pkgs.geckodriver
+    pkgs.codespelunker
+    pkgs.onnxruntime
   ];
 
   # configure direnv .envrc file
@@ -92,11 +95,17 @@
     nim c --threads:on -o:bin/pepino          packages/pepino/src/pepino.nim
   '';
 
+  files.alias.qmd-add = ''
+    # add file to QMD
+    nix run github:numtide/llm-agents.nix#qmd -- collection add $(dirname $1)
+  '';
+
   env = [
-    { name = "LD_LIBRARY_PATH"; prefix = "${pkgs.curlFull.out}/lib:${pkgs.cosmopolitan}/lib";}
+    { name = "LD_LIBRARY_PATH"; prefix = "${pkgs.curlFull.out}/lib:${pkgs.cosmopolitan}/lib:${lib.getLib pkgs.openssl}/lib:${pkgs.onnxruntime}/lib";}
     { name = "LDFLAGS";         prefix = "-L${pkgs.zlib}/lib";}
     { name = "NIX_LDFLAGS";     value = "-L${pkgs.zlib}/lib";}
     #{ name = "PKG_CONFIG_PATH"; prefix = "${pkgs.mimalloc.dev}/lib/pkgconfig";}
     { name = "COSMO_PATH";      prefix = "${pkgs.cosmocc}";}
+    { name = "ORT_DYLIB_PATH";  value = "${pkgs.onnxruntime}/lib/libonnxruntime.so";}
   ];
 }

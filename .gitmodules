@@ -1,0 +1,24 @@
+[submodule "packages/cascli"]
+	path = packages/cascli
+	url = git@github.com:riinr/cascli.git
+[submodule "packages/efln"]
+	path = packages/efln
+	url = git@github.com:riinr/efln.git
+[submodule "packages/gRaphSS"]
+	path = packages/gRaphSS
+	url = git@github.com:riinr/gRaphSS.git
+[submodule "packages/halt"]
+	path = packages/halt
+	url = git@github.com:riinr/halt.git
+[submodule "packages/nicrodns/clib"]
+	path = packages/nicrodns/clib
+	url = git@github.com:videolabs/libmicrodns.git
+[submodule "nim"]
+	path = nim
+	url = https://github.com/nim-lang/nim
+[submodule ".opencode/repo2skill"]
+	path = .opencode/repo2skill
+	url = git@github.com:zhangyanxs/repo2skill.git
+[submodule ".opencode/nim-skills"]
+	path = .opencode/nim-skills
+	url = git@github.com:planetis-m/skills.git
