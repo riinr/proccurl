@@ -12,3 +12,4 @@ bin           = @["proccurl"]
 
 requires "nim >= 2.2.0"
 requires "curly >=1.1.1"
+requires "loony >=1.1.1"
