@@ -1,4 +1,4 @@
-import std/[unittest, tables, strutils]
+import std/[unittest, tables, strutils, net]
 import mdns
 
 # Build a DNS/mDNS wire message by hand (no response encoder in the module).
@@ -71,3 +71,90 @@ suite "mdns wire decoding":
   test "decodeMessage rejects a truncated message":
     expect MdnsError:
       discard decodeMessage(@[byte 0, 0, 0x84, 0x00, 0, 1])
+suite "mdns announcing":
+  test "serviceRecords builds a DNS-SD record set":
+    let svc = AnnouncedService(
+      instance: "My Web Server", serviceType: "_http._tcp",
+      host: "myhost", port: Port(8080),
+      txt: @["path=/"], addresses: @["192.168.1.50"])
+    let recs = serviceRecords(svc)
+    check recs.len == 4
+    # PTR: shared, owner = service type, rdata = instance
+    check recs[0].name == "_http._tcp.local."
+    check recs[0].rtype == uint16(rtPtr)
+    check not recs[0].flush
+    # SRV: unique, owner = instance
+    check recs[1].name == "My Web Server._http._tcp.local."
+    check recs[1].rtype == uint16(rtSrv)
+    check recs[1].flush
+    # TXT: unique
+    check recs[2].name == "My Web Server._http._tcp.local."
+    check recs[2].rtype == uint16(rtTxt)
+    check recs[2].flush
+    # A: unique, owner = host
+    check recs[3].name == "myhost.local."
+    check recs[3].rtype == uint16(rtA)
+    check recs[3].flush
+
+  test "serviceRecords rejects a missing address":
+    expect MdnsError:
+      discard serviceRecords(AnnouncedService(
+        instance: "S", serviceType: "_x._tcp", host: "h", port: Port(9)))
+
+  test "encodeResponse round-trips through decodeMessage":
+    let svc = AnnouncedService(instance: "S", serviceType: "_x._tcp",
+      host: "h", port: Port(9), txt: @["a=b"], addresses: @["10.0.0.1"])
+    let msg = encodeResponse(serviceRecords(svc), [])
+    let m = decodeMessage(msg)
+    check m.qr
+    check m.answers.len == 4
+    check rdataName(m, m.answers[0]) == "S._x._tcp.local"
+    check rdataSrvPort(m.answers[1]) == 9
+    check rdataTxt(m.answers[2]) == @["a=b"]
+    check rdataIP(m.answers[3]) == "10.0.0.1"
+
+  test "encodeProbe builds an ANY probe with proposed records":
+    let svc = AnnouncedService(instance: "S", serviceType: "_x._tcp",
+      host: "h", port: Port(9), addresses: @["10.0.0.1"])
+    let recs = serviceRecords(svc)
+    let msg = encodeProbe(@["h.local.", "S._x._tcp.local."], recs)
+    let m = decodeMessage(msg)
+    check not m.qr
+    check m.questions.len == 2
+    check m.questions[0].qtype == 255  # ANY
+    check m.authorities.len == recs.len
+
+  test "answersFor answers a PTR query and adds the rest as additional":
+    let svc = AnnouncedService(instance: "S", serviceType: "_x._tcp",
+      host: "h", port: Port(9), addresses: @["10.0.0.1"])
+    let recs = serviceRecords(svc)
+    let m = decodeMessage(encodeBrowseQuery("_x._tcp"))
+    let (ans, add) = answersFor(m, recs)
+    check ans.len == 1
+    check ans[0].rtype == uint16(rtPtr)
+    check add.len == 3
+
+suite "mdns library API":
+  test "hostName returns the system host name":
+    check hostName().len > 0
+
+  test "normServiceType adds a .local. suffix and trailing dot":
+    check normServiceType("_http._tcp") == "_http._tcp.local."
+    check normServiceType("_http._tcp.") == "_http._tcp.local."
+    check normServiceType("_http._tcp.local.") == "_http._tcp.local."
+
+  test "newMdnsResponder captures the service":
+    let svc = AnnouncedService(instance: "S", serviceType: "_x._tcp",
+      host: "h", port: Port(9), addresses: @["10.0.0.1"])
+    let r = newMdnsResponder(svc, "192.168.1.5")
+    check r.service == svc
+    check r.interfaceIp == "192.168.1.5"
+    check not r.ipv6
+    check not r.registered
+
+  test "serviceRecords is exported for library consumers":
+    let svc = AnnouncedService(instance: "S", serviceType: "_x._tcp",
+      host: "h", port: Port(9), addresses: @["10.0.0.1"])
+    check serviceRecords(svc).len == 4
+    check answersFor(decodeMessage(encodeBrowseQuery("_x._tcp")),
+                     serviceRecords(svc)).ans.len == 1
