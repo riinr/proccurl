@@ -2,11 +2,11 @@
 
 version       = "0.1.0"
 author        = "hugosenari"
-description   = "Minimal pure-Nim DNS message parser and resolver"
+description   = "Pure-Nim Multicast DNS service discovery (RFC 6762)"
 license       = "MIT"
 srcDir        = "src"
 binDir        = "bin"
-bin           = @["nicrodns/scan=scan"]
+bin           = @["mdns=mdns"]
 
 # Dependencies
 
